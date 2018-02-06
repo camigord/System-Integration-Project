@@ -1,2 +1,2 @@
-# System_Integration_Project
+# System Integration Project
 Programming a Real Self-Driving Car for the UDACITY Nanodegree

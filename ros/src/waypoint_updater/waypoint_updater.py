@@ -5,6 +5,7 @@ from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane, Waypoint
 
 import math
+import numpy as np
 
 '''
 This node will publish waypoints from the car's current position to some `x` distance ahead.
@@ -38,15 +39,43 @@ class WaypointUpdater(object):
 
         # TODO: Add other member variables you need below
 
+        self.waypoints = None
+        self.final_waypoints = None
+
         rospy.spin()
 
+    def publish_waypoints(self):
+        msg = Lane()
+        msg.header = self.waypoints.header
+        msg.waypoints = self.final_waypoints
+        self.final_waypoints_pub.publish(msg)
+
     def pose_cb(self, msg):
-        # TODO: Implement
-        pass
+        #
+        dist_f = lambda a, b: math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2)
+        distances = []
+        if self.waypoints:      # If waypoints have already been received
+            # Find the closest waypoint to current pos
+            for waypoint in self.waypoints.waypoints:
+                distances.append(dist_f(waypoint.pose.pose.position, msg.pose.position))
+
+            # Get index of closest waypoint
+            self.closest_index = np.argmin(distances)
+
+            # We need to add the waypoints in front of us, but we need to consider this is a circular track
+            if self.closest_index + LOOKAHEAD_WPS + 1 > np.shape(self.waypoints.waypoints)[0]:
+                # We are close to the end of the track, we need to take points from the beginning
+                end_index = self.closest_index + LOOKAHEAD_WPS + 1 - np.shape(self.waypoints.waypoints)[0]
+                self.final_waypoints = self.waypoints.waypoints[self.closest_index:] + self.waypoints.waypoints[:end_index]
+            else:
+                self.final_waypoints = self.waypoints.waypoints[self.closest_index:self.closest_index+LOOKAHEAD_WPS+1]
+
+            # Publish final waypoints
+            self.publish_waypoints()
 
     def waypoints_cb(self, waypoints):
-        # TODO: Implement
-        pass
+        # Storing waypoints given that they are published only once
+        self.waypoints = waypoints
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement

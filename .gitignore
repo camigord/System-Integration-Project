@@ -1,1 +1,4 @@
 *.pyc
+*.tmp
+/ros/build/*
+/ros/devel/*

@@ -53,10 +53,16 @@ class DBWNode(object):
         self.brake_pub = rospy.Publisher('/vehicle/brake_cmd',
                                          BrakeCmd, queue_size=1)
 
-        # TODO: Create `Controller` object
-        # self.controller = Controller(<Arguments you wish to provide>)
+        # Create `Controller` object
+        self.controller = Controller()
 
-        # TODO: Subscribe to all the topics you need to
+        # Subscribe to all the topics
+        rospy.Subscriber('/current_velocity', TwistStamped, self.current_vel_cb)
+        rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cmd_cb)
+        rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.enabled_cb)
+
+        # Enable flag
+        self.enabled = False
 
         self.loop()
 
@@ -70,9 +76,28 @@ class DBWNode(object):
             #                                                     <current linear velocity>,
             #                                                     <dbw status>,
             #                                                     <any other argument you need>)
-            # if <dbw is enabled>:
-            #   self.publish(throttle, brake, steer)
+
+            throttle, brake, steering = self.controller.control()
+            if self.enabled:
+                self.publish(throttle, brake, steering)
             rate.sleep()
+
+    def current_vel_cb(self, velocity):
+        pass
+
+    def twist_cmd_cb(self, msg):
+        linear_vel = msg.twist.linear.x     # Linear velocity in m/s
+        angular_vel = msg.twist.angular.z   # Angular velocity in rad/s
+        pass
+
+    def enabled_cb(self, msg):
+        self.enabled = msg.data
+
+        if self.enabled:
+            rospy.logwarn('TwistController enabled!')
+        else:
+            rospy.logwarn('TwistController disabled...')
+            # TODO: Reset PID controller
 
     def publish(self, throttle, brake, steer):
         tcmd = ThrottleCmd()

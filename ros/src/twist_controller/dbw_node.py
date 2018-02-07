@@ -57,43 +57,45 @@ class DBWNode(object):
         self.controller = Controller()
 
         # Subscribe to all the topics
-        rospy.Subscriber('/current_velocity', TwistStamped, self.current_vel_cb)
+        rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
         rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cmd_cb)
-        rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.enabled_cb)
+        rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_enabled_cb)
 
-        # Enable flag
-        self.enabled = False
+        # Variables
+        self.current_velocity = None
+        self.twist_cmd = None
+        self.dbw_enabled = False
+        self.linear_vel = None
+        self.angular_vel = None
 
         self.loop()
 
     def loop(self):
         rate = rospy.Rate(50) # 50Hz
         while not rospy.is_shutdown():
-            # TODO: Get predicted throttle, brake, and steering using `twist_controller`
-            # You should only publish the control commands if dbw is enabled
-            # throttle, brake, steering = self.controller.control(<proposed linear velocity>,
-            #                                                     <proposed angular velocity>,
-            #                                                     <current linear velocity>,
-            #                                                     <dbw status>,
-            #                                                     <any other argument you need>)
+            throttle, brake, steering = self.controller.control(self.twist_cmd,
+                                                                self.current_velocity,
+                                                                self.dbw_enabled)
 
-            throttle, brake, steering = self.controller.control()
-            if self.enabled:
+            if self.dbw_enabled:
                 self.publish(throttle, brake, steering)
-            rate.sleep()
+            rate.sleep()       
 
-    def current_vel_cb(self, velocity):
-        pass
+    """
+    Callbacks
+    """
+    def current_velocity_cb(self, msg):
+        self.current_velocity = msg
 
     def twist_cmd_cb(self, msg):
-        linear_vel = msg.twist.linear.x     # Linear velocity in m/s
-        angular_vel = msg.twist.angular.z   # Angular velocity in rad/s
-        pass
+        self.twist_cmd = msg
+        # I kept your code here, if you want to work with these two separately
+        self.linear_vel = msg.twist.linear.x     # Linear velocity in m/s
+        self.angular_vel = msg.twist.angular.z   # Angular velocity in rad/s
 
-    def enabled_cb(self, msg):
-        self.enabled = msg.data
-
-        if self.enabled:
+    def dbw_enabled_cb(self, msg):
+        self.dbw_enabled = msg
+        if self.dbw_enabled:
             rospy.logwarn('TwistController enabled!')
         else:
             rospy.logwarn('TwistController disabled...')

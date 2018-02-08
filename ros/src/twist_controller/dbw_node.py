@@ -35,6 +35,16 @@ class DBWNode(object):
     def __init__(self):
         rospy.init_node('dbw_node')
 
+        # Enable flag
+        self.enabled = False
+        rospy.logwarn('TwistController disabled...')
+
+        self.sample_rate = 50       # 50Hz
+
+        self.required_linear_velocity = None
+        self.required_angular_velocity = None
+        self.current_linear_velocity = None
+
         vehicle_mass = rospy.get_param('~vehicle_mass', 1736.35)
         fuel_capacity = rospy.get_param('~fuel_capacity', 13.5)
         brake_deadband = rospy.get_param('~brake_deadband', .1)
@@ -54,52 +64,58 @@ class DBWNode(object):
                                          BrakeCmd, queue_size=1)
 
         # Create `Controller` object
-        self.controller = Controller()
+        self.controller = Controller(sampling_rate = self.sample_rate,
+                                     vehicle_mass = vehicle_mass,
+                                     fuel_capacity = fuel_capacity,
+                                     brake_deadband = brake_deadband,
+                                     decel_limit = decel_limit,
+                                     accel_limit = accel_limit,
+                                     wheel_radius = wheel_radius,
+                                     wheel_base = wheel_base,
+                                     steer_ratio = steer_ratio,
+                                     max_lat_accel = max_lat_accel,
+                                     max_steer_angle = max_steer_angle)
 
         # Subscribe to all the topics
         rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
         rospy.Subscriber('/twist_cmd', TwistStamped, self.twist_cmd_cb)
         rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_enabled_cb)
 
-        # Variables
-        self.current_velocity = None
-        self.twist_cmd = None
-        self.dbw_enabled = False
-        self.linear_vel = None
-        self.angular_vel = None
-
         self.loop()
 
     def loop(self):
-        rate = rospy.Rate(50) # 50Hz
+        rate = rospy.Rate(self.sample_rate)
         while not rospy.is_shutdown():
-            throttle, brake, steering = self.controller.control(self.twist_cmd,
-                                                                self.current_velocity,
-                                                                self.dbw_enabled)
+            # Make sure autonomous system is enabled
+            if self.enabled and self.required_linear_velocity and self.current_linear_velocity:
+                throttle, brake, steering = self.controller.control(self.current_linear_velocity,
+                                                                    self.required_linear_velocity,
+                                                                    self.required_angular_velocity)
 
-            if self.dbw_enabled:
                 self.publish(throttle, brake, steering)
-            rate.sleep()       
+            rate.sleep()
 
     """
     Callbacks
     """
     def current_velocity_cb(self, msg):
-        self.current_velocity = msg
+        # Get current velocity from topic
+        self.current_linear_velocity = msg.twist.linear.x
 
     def twist_cmd_cb(self, msg):
-        self.twist_cmd = msg
-        # I kept your code here, if you want to work with these two separately
-        self.linear_vel = msg.twist.linear.x     # Linear velocity in m/s
-        self.angular_vel = msg.twist.angular.z   # Angular velocity in rad/s
+        # Get the desired velocity from waypoint_followe
+        self.required_linear_velocity = msg.twist.linear.x     # Linear velocity in m/s
+        self.required_angular_velocity = msg.twist.angular.z   # Angular velocity in rad/s
 
     def dbw_enabled_cb(self, msg):
-        self.dbw_enabled = msg
-        if self.dbw_enabled:
+        self.enabled = msg.data
+
+        if self.enabled:
             rospy.logwarn('TwistController enabled!')
         else:
             rospy.logwarn('TwistController disabled...')
-            # TODO: Reset PID controller
+            # Reset PID controllers
+            self.controller.reset()
 
     def publish(self, throttle, brake, steer):
         tcmd = ThrottleCmd()

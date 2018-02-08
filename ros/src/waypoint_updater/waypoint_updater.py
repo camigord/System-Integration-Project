@@ -41,42 +41,63 @@ class WaypointUpdater(object):
 
         # TODO: Add other member variables you need below
 
-        self.waypoints = None
+        # self.base_waypoints = None
         self.final_waypoints = None
+        # self.current_pose = None
+
+        self.decimator_i = 0
+        self.decimator_n = 10
 
         rospy.spin()
 
+        # Comment the above and uncomment this to use the timer
+        """
+        rate = rospy.Rate(50)
+        while not rospy.is_shutdown():
+            self.action()
+            rate.sleep()
+        """
+
+    """
+    Main action
+    """
+    def action(self):
+        # Proceed only if the first messages have been received
+        if hasattr(self, 'current_pose') and hasattr(self, 'base_waypoints'):
+
+            # Get the closest waypoint id
+            closest_waypoint_id = self.get_closest_waypoint()
+            rospy.logwarn('Closest waypoint id: {}'.format(closest_waypoint_id))
+
+            # Calculate next waypoints
+            self.final_waypoints = self.calculate_final_waypoints(closest_waypoint_id, LOOKAHEAD_WPS)
+
+            # Publish final waypoints
+            self.publish_waypoints()
+
     def publish_waypoints(self):
         msg = Lane()
-        msg.header = self.base_waypoints.header
+        # msg.header = self.base_waypoints.header
+        msg.header.stamp = rospy.Time().now()
+        msg.header.frame_id = '/world'
         msg.waypoints = self.final_waypoints
         self.final_waypoints_pub.publish(msg)
+
 
     """
     Callbacks
     """
     def pose_cb(self, msg):
-        #
-        dist_f = lambda a, b: math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2)
-        distances = []
-        if self.base_waypoints:      # If waypoints have already been received
-            # Find the closest waypoint to current pos
-            for waypoint in self.base_waypoints.waypoints:
-                distances.append(dist_f(waypoint.pose.pose.position, msg.pose.position))
-
-            # Get index of closest waypoint
-            self.closest_index = np.argmin(distances)
-
-            # We need to add the waypoints in front of us, but we need to consider this is a circular track
-            if self.closest_index + LOOKAHEAD_WPS + 1 > np.shape(self.base_waypoints.waypoints)[0]:
-                # We are close to the end of the track, we need to take points from the beginning
-                end_index = self.closest_index + LOOKAHEAD_WPS + 1 - np.shape(self.waypoints.waypoints)[0]
-                self.final_waypoints = self.base_waypoints.waypoints[self.closest_index:] + self.base_waypoints.waypoints[:end_index]
-            else:
-                self.final_waypoints = self.base_waypoints.waypoints[self.closest_index:self.closest_index+LOOKAHEAD_WPS+1]
-
-            # Publish final waypoints
-            self.publish_waypoints()
+        # First thing first, get the current pose
+        self.current_pose = msg
+        rospy.logwarn('{} New pose received'.format(rospy.Time().now()))
+        
+        # Trigger action
+        if self.decimator_i == self.decimator_n:
+            self.decimator_i = 0
+            self.action()
+        else:
+            self.decimator_i = self.decimator_i + 1
 
     def waypoints_cb(self, waypoints):
         # Storing waypoints given that they are published only once
@@ -104,6 +125,31 @@ class WaypointUpdater(object):
             dist += dl(waypoints[wp1].pose.pose.position, waypoints[i].pose.pose.position)
             wp1 = i
         return dist
+
+    """
+    Return the id of the waypoint closest to the pose
+    """
+    def get_closest_waypoint(self):
+        dist = float('inf')
+        dl = lambda a, b: math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2  + (a.z-b.z)**2)
+        wp = 0
+        for i in range(len(self.base_waypoints.waypoints)):
+            new_dist = dl(self.current_pose.pose.position, self.base_waypoints.waypoints[i].pose.pose.position)
+            if new_dist < dist:
+                dist = new_dist
+                wp = i
+        return wp
+
+    """
+    Calculate the fnal waypoints to follow. For the moment this is just the list of the next base_waypoints.
+    """
+    def calculate_final_waypoints(self, closest_waypoint_id, n):
+        next_waypoints = []
+        for i in range(closest_waypoint_id, (closest_waypoint_id + n)):
+            # Make the index modulo lenght of base_waypoints
+            j = i % len(self.base_waypoints.waypoints)
+            next_waypoints.append(self.base_waypoints.waypoints[j])
+        return next_waypoints
 
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, TwistStamped
 from styx_msgs.msg import Lane, Waypoint
 from std_msgs.msg import Int32, Float32
 
@@ -32,18 +32,18 @@ class WaypointUpdater(object):
 
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
-
-        # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
         rospy.Subscriber('/traffic_waypoint',  Int32, self.traffic_cb)
         rospy.Subscriber('/obstacle_waypoint', Int32, self.obstacle_cb)
+        rospy.Subscriber('/current_velocity', TwistStamped, self.current_velocity_cb)
 
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
-
-        # TODO: Add other member variables you need below
 
         # self.base_waypoints = None
         self.final_waypoints = None
         # self.current_pose = None
+        self.traffic_waypoint = -1
+
+        self.decel_limit = rospy.get_param('~decel_limit', -5)
 
         self.decimator_i = 0
         self.decimator_n = 10
@@ -69,6 +69,26 @@ class WaypointUpdater(object):
             closest_waypoint_id = self.get_closest_waypoint()
             # rospy.logwarn('Closest waypoint id: {}'.format(closest_waypoint_id))
 
+            # Start from the next (see later whether to make it more sophisticated)
+            next_wp = closest_waypoint_id + 1
+
+            # Check if there's a traffic light in sight
+            if self.traffic_waypoint != -1:
+
+                # Get distance from light and minimum stopping distance
+                traffic_light_distance = self.distance(self.base_waypoints.waypoints, next_wp, self.traffic_waypoint)
+                min_distance = self.current_velocity**2 / (2*self.decel_limit)
+                rospy.logwarn("Traffic light distance: {}".format(traffic_light_distance))
+
+                # Decide what to do if there's not enough room to brake
+                if traffic_light_distance > min_distance:
+                    brake = True
+                else:
+                    brake = True
+
+            else:
+                brake = False
+
             # Calculate next waypoints
             self.final_waypoints = self.calculate_final_waypoints(closest_waypoint_id, LOOKAHEAD_WPS)
 
@@ -83,50 +103,16 @@ class WaypointUpdater(object):
         msg.waypoints = self.final_waypoints
         self.final_waypoints_pub.publish(msg)
 
-
     """
-    Callbacks
+    Calculate the final waypoints to follow. For the moment this is just the list of the n base_waypoints ahead.
     """
-    def pose_cb(self, msg):
-        # First thing first, get the current pose
-        self.current_pose = msg
-        # rospy.logwarn('{} New pose received'.format(rospy.Time().now()))
-        
-        # Trigger action
-        if self.decimator_i == self.decimator_n:
-            self.decimator_i = 0
-            self.action()
-        else:
-            self.decimator_i = self.decimator_i + 1
-
-    def waypoints_cb(self, waypoints):
-        # Storing waypoints given that they are published only once
-        self.base_waypoints = waypoints
-
-    def traffic_cb(self, msg):
-        # TODO: Callback for /traffic_waypoint message. Implement
-        self.traffic_waypoint = msg.data
-        rospy.logwarn('Traffic msg received: {}'.format(self.traffic_waypoint))
-
-    def obstacle_cb(self, msg):
-        # TODO: Callback for /obstacle_waypoint message. We will implement it later
-        self.obstacle_waypoint = msg.data
-        rospy.logwarn('Obstacle msg received: {}'.format(self.obstacle_waypoint))
-
-    def get_waypoint_velocity(self, waypoint):
-        return waypoint.twist.twist.linear.x
-
-    def set_waypoint_velocity(self, waypoints, waypoint, velocity):
-        waypoints[waypoint].twist.twist.linear.x = velocity
-
-    # Note that wp1 and wp2 are indexes
-    def distance(self, waypoints, wp1, wp2):
-        dist = 0
-        dl = lambda a, b: math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2  + (a.z-b.z)**2)
-        for i in range(wp1, wp2+1):
-            dist += dl(waypoints[wp1].pose.pose.position, waypoints[i].pose.pose.position)
-            wp1 = i
-        return dist
+    def calculate_final_waypoints(self, closest_wp, n):
+        next_waypoints = []
+        for i in range(closest_wp, (closest_wp + n)):
+            # Make the index modulo lenght of base_waypoints
+            j = i % len(self.base_waypoints.waypoints)
+            next_waypoints.append(self.base_waypoints.waypoints[j])
+        return next_waypoints
 
     """
     Return the id (wp) of the waypoint closest to the pose
@@ -143,15 +129,15 @@ class WaypointUpdater(object):
         return wp
 
     """
-    Calculate the final waypoints to follow. For the moment this is just the list of the n base_waypoints ahead.
+    Return distance between two waypoints
     """
-    def calculate_final_waypoints(self, closest_wp, n):
-        next_waypoints = []
-        for i in range(closest_wp, (closest_wp + n)):
-            # Make the index modulo lenght of base_waypoints
-            j = i % len(self.base_waypoints.waypoints)
-            next_waypoints.append(self.base_waypoints.waypoints[j])
-        return next_waypoints
+    def distance(self, waypoints, wp1, wp2):
+        dist = 0
+        dl = lambda a, b: math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2  + (a.z-b.z)**2)
+        for i in range(wp1, wp2+1):
+            dist += dl(waypoints[wp1].pose.pose.position, waypoints[i].pose.pose.position)
+            wp1 = i
+        return dist
 
     """
     Get linear velocity for a single waypoint
@@ -164,6 +150,46 @@ class WaypointUpdater(object):
     """
     def set_waypoint_velocity(self, waypoints, wp, velocity):
         pass
+
+
+    def get_waypoint_velocity(self, waypoint):
+        return waypoint.twist.twist.linear.x
+
+    def set_waypoint_velocity(self, waypoints, waypoint, velocity):
+        waypoints[waypoint].twist.twist.linear.x = velocity
+
+    """
+    Callbacks
+    """
+    def pose_cb(self, msg):
+        # First thing first, get the current pose
+        self.current_pose = msg
+        # rospy.logwarn('{} New pose received'.format(rospy.Time().now()))
+
+        # Trigger action
+        if self.decimator_i == self.decimator_n:
+            self.decimator_i = 0
+            self.action()
+        else:
+            self.decimator_i = self.decimator_i + 1
+
+    def waypoints_cb(self, waypoints):
+        # Storing waypoints given that they are published only once
+        self.base_waypoints = waypoints
+
+    def traffic_cb(self, msg):
+        # TODO: Callback for /traffic_waypoint message. Implement
+        self.traffic_waypoint = msg.data
+        # rospy.logwarn('Traffic msg received: {}'.format(self.traffic_waypoint))
+
+    def obstacle_cb(self, msg):
+        # TODO: Callback for /obstacle_waypoint message. We will implement it later
+        self.obstacle_waypoint = msg.data
+        # rospy.logwarn('Obstacle msg received: {}'.format(self.obstacle_waypoint))
+
+    def current_velocity_cb(self, msg):
+        # TODO: Callback for /obstacle_waypoint message. We will implement it later
+        self.current_velocity = msg.twist.linear.x
 
 
 if __name__ == '__main__':

@@ -67,7 +67,7 @@ class WaypointUpdater(object):
 
             # Get the closest waypoint id
             closest_waypoint_id = self.get_closest_waypoint()
-            rospy.logwarn('Closest waypoint id: {}'.format(closest_waypoint_id))
+            # rospy.logwarn('Closest waypoint id: {}'.format(closest_waypoint_id))
 
             # Calculate next waypoints
             self.final_waypoints = self.calculate_final_waypoints(closest_waypoint_id, LOOKAHEAD_WPS)
@@ -90,7 +90,7 @@ class WaypointUpdater(object):
     def pose_cb(self, msg):
         # First thing first, get the current pose
         self.current_pose = msg
-        rospy.logwarn('{} New pose received'.format(rospy.Time().now()))
+        # rospy.logwarn('{} New pose received'.format(rospy.Time().now()))
         
         # Trigger action
         if self.decimator_i == self.decimator_n:
@@ -106,10 +106,12 @@ class WaypointUpdater(object):
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
         self.traffic_waypoint = msg.data
+        rospy.logwarn('Traffic msg received: {}'.format(self.traffic_waypoint))
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
         self.obstacle_waypoint = msg.data
+        rospy.logwarn('Obstacle msg received: {}'.format(self.obstacle_waypoint))
 
     def get_waypoint_velocity(self, waypoint):
         return waypoint.twist.twist.linear.x
@@ -127,7 +129,7 @@ class WaypointUpdater(object):
         return dist
 
     """
-    Return the id of the waypoint closest to the pose
+    Return the id (wp) of the waypoint closest to the pose
     """
     def get_closest_waypoint(self):
         dist = float('inf')
@@ -141,15 +143,27 @@ class WaypointUpdater(object):
         return wp
 
     """
-    Calculate the fnal waypoints to follow. For the moment this is just the list of the next base_waypoints.
+    Calculate the final waypoints to follow. For the moment this is just the list of the n base_waypoints ahead.
     """
-    def calculate_final_waypoints(self, closest_waypoint_id, n):
+    def calculate_final_waypoints(self, closest_wp, n):
         next_waypoints = []
-        for i in range(closest_waypoint_id, (closest_waypoint_id + n)):
+        for i in range(closest_wp, (closest_wp + n)):
             # Make the index modulo lenght of base_waypoints
             j = i % len(self.base_waypoints.waypoints)
             next_waypoints.append(self.base_waypoints.waypoints[j])
         return next_waypoints
+
+    """
+    Get linear velocity for a single waypoint
+    """
+    def get_waypoint_velocity(self, waypoint):
+        pass
+
+    """
+    Set linear velocity for a single waypoint id (wp) in a list of waypoints
+    """
+    def set_waypoint_velocity(self, waypoints, wp, velocity):
+        pass
 
 
 if __name__ == '__main__':

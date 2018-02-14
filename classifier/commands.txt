@@ -1,0 +1,20 @@
+# To Generate the frozen Graph
+
+python object_detection/export_inference_graph.py \
+	--input_type image_tensor \
+	--pipeline_config_path=/home/camilog/Documents/Git_Repo/System-Integration-Project/classifier/models/model/ssd_mobilenet_v1_bosch.config \
+	--trained_checkpoint_prefix=/home/camilog/Documents/Git_Repo/System-Integration-Project/classifier/models/model/train/model.ckpt-69734 \
+	--output_directory exported_graphs
+
+
+# To Train:
+
+python object_detection/train.py --logtostderr --pipeline_config_path=/home/camilog/Documents/Git_Repo/System-Integration-Project/classifier/models/model/ssd_mobilenet_v1_bosch.config --train_dir=/home/camilog/Documents/Git_Repo/System-Integration-Project/classifier/models/model/train/
+
+# Validation
+
+python object_detection/eval.py \
+    --logtostderr \
+    --pipeline_config_path=/home/camilog/Documents/Git_Repo/System-Integration-Project/classifier/models/model/ssd_mobilenet_v1_bosch.config \
+    --checkpoint_dir=/home/camilog/Documents/Git_Repo/System-Integration-Project/classifier/models/model/train/ \
+    --eval_dir=/home/camilog/Documents/Git_Repo/System-Integration-Project/classifier/models/model/eval/

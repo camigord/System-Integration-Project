@@ -20,8 +20,8 @@ class TLClassifier(object):
         self.detection_graph = tf.Graph()
 
         #Load frozen Tensorflow model into memory
-        detection_graph = tf.Graph()
-        with detection_graph.as_default():
+        self.detection_graph = tf.Graph()
+        with self.detection_graph.as_default():
             od_graph_def = tf.GraphDef()
             with tf.gfile.GFile(PATH_TO_CKPT, 'rb') as fid:
                 serialized_graph = fid.read()
@@ -38,6 +38,8 @@ class TLClassifier(object):
         self.scores = self.detection_graph.get_tensor_by_name('detection_scores:0')
         self.classes = self.detection_graph.get_tensor_by_name('detection_classes:0')
         self.num_detections = self.detection_graph.get_tensor_by_name('num_detections:0')
+
+        print("Model graph loaded")
 
         #Loading label map
         label_map = label_map_util.load_labelmap(PATH_TO_LABELS)

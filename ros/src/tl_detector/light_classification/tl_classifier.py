@@ -77,14 +77,14 @@ class TLClassifier(object):
         current_light = TrafficLight.UNKNOWN
 
         for i in range(boxes.shape[0]):
-            if score[i] > 0.6:
+            if scores[i] > 0.6:
                 light_color = self.category_index[classes[i]]['name']
 
-                if class_name == 'Green':
+                if light_color == 'Green':
                     current_light = TrafficLight.GREEN
-                elif class_name == 'Red':
+                elif light_color == 'Red':
                     current_light = TrafficLight.RED
-                elif class_name == 'Yellow':
+                elif light_color == 'Yellow':
                     current_light = TrafficLight.YELLOW
 
 

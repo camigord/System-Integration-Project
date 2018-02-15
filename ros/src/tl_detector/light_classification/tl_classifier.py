@@ -63,8 +63,8 @@ class TLClassifier(object):
         image_expanded = np.expand_dims(image, axis=0)
         with self.detection_graph.as_default():
             (boxes, scores, classes, num) = self.sess.run(
-            [self.detection_boxes, self.detection_scores,
-            self.detection_classes, self.num_detections],
+            [self.boxes, self.scores,
+            self.classes, self.num_detections],
             feed_dict={self.image_tensor: image_expanded})
 
         boxes = np.squeeze(boxes)

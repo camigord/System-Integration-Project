@@ -12,7 +12,7 @@ class TLClassifier(object):
         #TODO load classifier
         curr_dir = os.path.dirname(os.path.realpath(__file__))
 
-        model = curr_dir + '/trafficlight_model_sim/frozen_inference_graph.pb'
+        path_to_ckpt = curr_dir + '/trafficlight_model_sim/frozen_inference_graph.pb'
 
         path_to_labels = curr_dir + '/label_map.pbtxt'
         num_classes = 4
@@ -23,12 +23,12 @@ class TLClassifier(object):
         self.detection_graph = tf.Graph()
         with self.detection_graph.as_default():
             od_graph_def = tf.GraphDef()
-            with tf.gfile.GFile(PATH_TO_CKPT, 'rb') as fid:
+            with tf.gfile.GFile(path_to_ckpt, 'rb') as fid:
                 serialized_graph = fid.read()
                 od_graph_def.ParseFromString(serialized_graph)
                 tf.import_graph_def(od_graph_def, name='')
 
-            self.sess = tf.Session(graph=self.detection_graph, config=config)
+            self.sess = tf.Session(graph=self.detection_graph)
 
         self.image_tensor = self.detection_graph.get_tensor_by_name('image_tensor:0')
         # Each box represents a part of the image where a particular object was detected.

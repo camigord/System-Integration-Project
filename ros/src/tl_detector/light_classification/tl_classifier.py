@@ -88,5 +88,5 @@ class TLClassifier(object):
                     current_light = TrafficLight.YELLOW
 
 
-        #return current_light
-        return TrafficLight.UNKNOWN
+        return current_light
+        #return TrafficLight.UNKNOWN

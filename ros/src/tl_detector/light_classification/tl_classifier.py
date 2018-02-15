@@ -42,8 +42,8 @@ class TLClassifier(object):
         print("Model graph loaded")
 
         #Loading label map
-        label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
-        categories = label_map_util.convert_label_map_to_categories(label_map, max_num_classes=NUM_CLASSES, use_display_name=True)
+        label_map = label_map_util.load_labelmap(path_to_labels)
+        categories = label_map_util.convert_label_map_to_categories(label_map, max_num_classes=num_classes, use_display_name=True)
 
         self.category_index = label_map_util.create_category_index(categories)
 
@@ -71,4 +71,20 @@ class TLClassifier(object):
         scores = np.squeeze(scores)
         classes = np.squeeze(classes).astype(np.int32)
 
+        #set unknown as default
+        self.current_light == TrafficLight.UNKNOWN
+
+        for i in range(boxes.shape[0]):
+            if score[i] > 0.6:
+                light_color = self.category_index[classes[i]]['name']
+
+                if class_name == 'Green':
+                    self.current_light = TrafficLight.GREEN
+                elif class_name == 'Red':
+                    self.current_light = TrafficLight.RED
+                elif class_name == 'Yellow':
+                    self.current_light = TrafficLight.YELLOW
+
+
+        #return self.current_light
         return TrafficLight.UNKNOWN

@@ -15,6 +15,10 @@ import math
 STATE_COUNT_THRESHOLD = 3
 VISIBLE_DISTANCE = 50
 
+# TODO It calls self.image_cb at regular intervals even if the camera is switched off in the simulator. Deactivate this for complete testing and final release!
+DEBUG_CAMERA_ALWAYS_ON = True
+DEBUG_CAMERA_ALWAYS_ON_RATE = 50
+
 class TLDetector(object):
     def __init__(self):
         rospy.init_node('tl_detector')
@@ -52,7 +56,13 @@ class TLDetector(object):
         self.last_wp = -1
         self.state_count = 0
 
-        rospy.spin()
+        if DEBUG_CAMERA_ALWAYS_ON:
+            rate = rospy.Rate(DEBUG_CAMERA_ALWAYS_ON_RATE)
+            while not rospy.is_shutdown():
+                self.image_cb(0)
+                rate.sleep()
+        else:
+            rospy.spin()
 
     def pose_cb(self, msg):
         self.pose = msg
@@ -210,7 +220,7 @@ class TLDetector(object):
 
         if light:
             # This is how it should be
-            state = self.get_light_state(light)            
+            # state = self.get_light_state(light)
             # DEBUG assume all lights are red (0)
             state = 0
             return closest_light_wp, state

@@ -7,6 +7,7 @@ from std_msgs.msg import Int32, Float32
 
 import math
 import numpy as np
+import tf
 
 '''
 This node will publish waypoints from the car's current position to some `x` distance ahead.
@@ -23,7 +24,7 @@ as well as to verify your TL classifier.
 TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
-LOOKAHEAD_WPS = 200 # Number of waypoints we will publish. You can change this number
+LOOKAHEAD_WPS = 50 # Number of waypoints we will publish. You can change this number
 BRAKE_BUFFER_WP = 1  # How far from the stop line we would like the car to stop, to have some margin
 BRAKE_BUFFER_M = 5
 USE_TIMER_TRIGGERED = 0  # Defines whether the action is triggered by a timer or by an incoming pose 
@@ -115,89 +116,84 @@ class WaypointUpdater(object):
                     self.state = 0
             """
 
-            rospy.logwarn('State: {}'.format(self.state))
+            rospy.logwarn('Next wp: {}    Traffic wp: {}    State: {}'.format(next_wp, self.traffic_waypoint, self.state))
 
             # State action, calculate next waypoints
-            if self.state == 0:
-                self.final_waypoints = self.calculate_final_waypoints2(self.state, next_wp, next_wp+LOOKAHEAD_WPS)
-
-            elif self.state == 1:
-                self.final_waypoints = self.calculate_final_waypoints2(self.state, next_wp, self.traffic_waypoint)
-
-            """
-            elif self.state == 2:
-                self.final_waypoints = self.calculate_final_waypoints2(self.state, next_wp, next_wp+LOOKAHEAD_WPS)
-            """
+            self.calculate_final_waypoints(next_wp)
+            self.print_final_waypoints(20)
 
             # Publish final waypoints
             self.publish_waypoints()
 
     """
-    Calculate the final waypoints to follow, another version
+    Calculate the final waypoints to follow
     """
-    def calculate_final_waypoints2(self, state, start_wp, end_wp):
+    # TODO
+    # There a few bugs in this function I can't find. I'm reasonably sure all the rest is fine and they're concentrated here.
+    # When starting, it takes some time to switch from state = 0 to 1. This is not a bug (or at least not a bug here), the reason is that the traffic_waypoint message takes some time to arrive.
+    #
+    # BUGS:
+    # As the traffic lights are all red now as default, the only way to trigger a restart is to drive manually a little beyond the stop line and then switch again back to automatic. For some reason, the self.base_waypoints are not all 11.11 but some are zeros and it takes some time to get rid of these 0s. No fuckin idea why. 
+    #
+    # THING THAT WORK:
+    # The car stops at the traffic light (most of the times, when it doesn't I guess it's a PID problem as the waypoint's velocities are 0)
+    def calculate_final_waypoints(self, start_wp):           
+
         # Empty output list
-        final_waypoints = []
+        self.final_waypoints = []
 
-        # Just make sure end_wp is bigger than start_wp, if not (because of the circular path), add the length of the path. This isn't a problem because the actual index, j, is then taken as modulo path length
-        if end_wp is not None:
-            if end_wp < start_wp:
-                end_wp = end_wp + len(self.base_waypoints.waypoints)
-
-        if state == 0:
-            for i in range(start_wp, end_wp):
+        if self.state == 0:
+            for i in range(start_wp, start_wp + LOOKAHEAD_WPS):
                 j = i % len(self.base_waypoints.waypoints)
-                tmp = self.base_waypoints.waypoints[j]
+                tmp = Waypoint()
+                tmp.pose.pose = self.base_waypoints.waypoints[j].pose.pose
                 tmp.twist.twist.linear.x = self.base_waypoints.waypoints[j].twist.twist.linear.x
-                final_waypoints.append(tmp)
+                #rospy.logwarn("[{}] vx={}".format(j, self.base_waypoints.waypoints[j].twist.twist.linear.x))
+                self.final_waypoints.append(tmp)
 
-        if state == 1:
-            for i in range(start_wp, end_wp):
+        elif self.state == 1:
+            stop_bw = self.traffic_waypoint
+            # Deal with the circular path
+            # if stop_bw < start_wp:
+            #     stop_bw = stop_bw + len(self.base_waypoints.waypoints)
+
+            for i in range(start_wp, stop_bw):
                 j = i % len(self.base_waypoints.waypoints)
                 tmp = self.base_waypoints.waypoints[j]
 
-                d = self.distance_poses(tmp.pose.pose.position, self.base_waypoints.waypoints[end_wp].pose.pose.position)
+                """
+                d = self.distance_poses(tmp.pose.pose.position, self.base_waypoints.waypoints[stop_bw].pose.pose.position)                
                 if d > BRAKE_BUFFER_M and self.current_velocity < 1.0:
                     tmp.twist.twist.linear.x = 2.0
-                elif d < BRAKE_BUFFER_M and self.current_velocity < 1.0:
+                elif d < BRAKE_BUFFER_M:# and self.current_velocity < 1.0:
                     tmp.twist.twist.linear.x = 0.0
                 else:
-                    tmp.twist.twist.linear.x = min(self.current_velocity, self.base_waypoints.waypoints[j].twist.twist.linear.x)
+                tmp.twist.twist.linear.x = min(self.current_velocity, self.base_waypoints.waypoints[j].twist.twist.linear.x)
+                """
 
-                final_waypoints.append(tmp)
+                self.final_waypoints.append(tmp)
     
             # Brake to target
-            target_wp = len(final_waypoints)
+            target_wp = len(self.final_waypoints)
+            rospy.logwarn("stop_bw: {}    target_bw: {}".format(stop_bw, target_wp))
 
             # Waypoints after the traffic light -> set their speed to 0
-            for i in range(end_wp, start_wp + LOOKAHEAD_WPS):
+            for i in range(stop_bw, start_wp + LOOKAHEAD_WPS):
                 j = i % len(self.base_waypoints.waypoints)
                 tmp = self.base_waypoints.waypoints[j]
                 tmp.twist.twist.linear.x  = 0.0
-                final_waypoints.append(tmp)
+                self.final_waypoints.append(tmp)
 
             # Waypoints before the traffic light -> set their speed considering a specific breaking acceleration
-            last = final_waypoints[target_wp]
+            last = self.final_waypoints[target_wp]
             last.twist.twist.linear.x = 0.0
-            for wp in final_waypoints[:target_wp][::-1]:
+            for wp in self.final_waypoints[:target_wp][::-1]:
                 dist = self.distance_poses(wp.pose.pose.position, last.pose.pose.position)
                 dist = max(0.0, dist-BRAKE_BUFFER_M)
                 vel  = math.sqrt(2*self.breaking_acceleration*dist)
                 if vel < 1.0:
                     vel = 0.0
                 wp.twist.twist.linear.x = min(vel, wp.twist.twist.linear.x)
-
-        """
-        elif state == 2:
-            # All waypoints to 0
-            for i in range(start_wp, start_wp + LOOKAHEAD_WPS):
-                j = i % len(self.base_waypoints.waypoints)
-                tmp = self.base_waypoints.waypoints[j]
-                tmp.twist.twist.linear.x  = 0.0
-                final_waypoints.append(tmp)
-        """
-
-        return final_waypoints
 
     """
     Return the id (wp) of the waypoint closest to the pose
@@ -217,9 +213,15 @@ class WaypointUpdater(object):
     Returns the id (wp) of the waypoint immediately ahead of the current pose
     """
     def get_next_waypoint(self):
-        # Get the closest waypoint id
-        closest_wp = self.get_closest_waypoint()
-        next_wp = closest_wp + 1
+        next_wp = self.get_closest_waypoint()
+        heading = math.atan2((self.base_waypoints.waypoints[next_wp].pose.pose.position.y - self.current_pose.pose.position.y), (self.base_waypoints.waypoints[next_wp].pose.pose.position.x - self.current_pose.pose.position.x))
+        theta = tf.transformations.euler_from_quaternion([self.current_pose.pose.orientation.x,
+                                                          self.current_pose.pose.orientation.y,
+                                                          self.current_pose.pose.orientation.z,
+                                                          self.current_pose.pose.orientation.w])[-1]
+        angle = math.fabs(theta-heading)
+        if angle > math.pi / 4.0:
+            next_wp += 1
         return next_wp
 
     """
@@ -252,6 +254,15 @@ class WaypointUpdater(object):
         msg.header.frame_id = 'world'
         msg.waypoints = self.final_waypoints
         self.final_waypoints_pub.publish(msg)
+
+    """
+    Print the next N final waypoints
+    """
+    def print_final_waypoints(self, n):
+        s = ""
+        for i in range(0,n):
+            s = s + "  {}".format(self.final_waypoints[i].twist.twist.linear.x)
+        rospy.logwarn(s)
 
     """
     Get and set linear velocity for a single waypoint id (wp) in a list of waypoints

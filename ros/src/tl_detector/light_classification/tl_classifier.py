@@ -76,16 +76,17 @@ class TLClassifier(object):
         #set unknown as default
         current_light = TrafficLight.UNKNOWN
 
-        for i in range(boxes.shape[0]):
-            if scores[i] > 0.6:
-                light_color = self.category_index[classes[i]]['name']
+        max_score_idx = scores.argmax()
+        max_score = max(scores)
 
-                if light_color == 'Green':
-                    current_light = TrafficLight.GREEN
-                elif light_color == 'Red':
-                    current_light = TrafficLight.RED
-                elif light_color == 'Yellow':
-                    current_light = TrafficLight.YELLOW
+        if scores[max_score_idx] > 0.5:
+            light_color = self.category_index[classes[max_score_idx]]['name']
+            if light_color == 'Green':
+                current_light = TrafficLight.GREEN
+            elif light_color == 'Red':
+                current_light = TrafficLight.RED
+            elif light_color == 'Yellow':
+                current_light = TrafficLight.YELLOW
 
 
         return current_light

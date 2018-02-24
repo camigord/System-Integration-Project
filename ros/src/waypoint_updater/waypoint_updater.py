@@ -25,9 +25,8 @@ TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
 LOOKAHEAD_WPS = 50 # Number of waypoints we will publish. You can change this number
-BRAKE_BUFFER_M = 5  # How far from the stop line we would like the car to stop, to have some margin
+BRAKE_BUFFER_M = 5 # How far from the stop line we would like the car to stop, to have some margin
 USE_TIMER_TRIGGERED = 0  # Defines whether the action is triggered by a timer or by an incoming pose 
-WP_OFFSET = 5 # offset to add to next waypoint to cope with latency
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -84,34 +83,26 @@ class WaypointUpdater(object):
                     # Decide what to do if there's not enough room to brake
                     if traffic_light_distance > min_distance:
                         self.state = 1
-			# compute braking deceleration
-	                self.breaking_acceleration = abs(self.current_velocity**2 / (2*traffic_light_distance))
-			rospy.logwarn("Braking deceleration: {}".format(self.breaking_acceleration))
+                        # compute braking deceleration
+                        self.breaking_acceleration = abs(self.current_velocity**2 / (2*traffic_light_distance))
+                        rospy.logwarn("Braking deceleration: {}".format(self.breaking_acceleration))
                     else:
-			rospy.logwarn("Too late to break !!")
+                        rospy.logwarn("Too late to break !!")
                         self.state = 0 
                 else:
                     self.state = 0
 
             elif self.state == 1:
-                # The traffic light is still red
-                if self.traffic_waypoint != -1:  # this case is useless
-                    # We're still far from the stop line, keep on braking
-                    if traffic_light_distance > BRAKE_BUFFER_M:
-                        self.state = 1
-                    # We're close to the stop line, stop there
-                    else:
-                        self.state = 1
-                # There's no red anymore, get back to speed
-                else: # we could keep only this one
+                if self.traffic_waypoint == -1:
+                    # There's no red anymore, get back to speed
                     self.state = 0
 
-            rospy.logwarn('Next wp: {}, Traffic wp: {}, State: {}, Vel: {}'.format(next_wp, self.traffic_waypoint, self.state, self.current_velocity))
+            #rospy.logwarn('Next wp: {}, Traffic wp: {}, State: {}, Vel: {}'.format(next_wp, self.traffic_waypoint, self.state, self.current_velocity))
 
             # State action, calculate next waypoints
             self.calculate_final_waypoints(next_wp)
-            self.print_final_waypoints(10)
-	    # Publish final waypoints
+            #self.print_final_waypoints(10)
+            # Publish final waypoints
             self.publish_waypoints()
 
     """
@@ -130,42 +121,42 @@ class WaypointUpdater(object):
 
         # Empty output list
         self.final_waypoints = []
-	
-	# Define end wp
+
         if self.state == 0:
-	    end_wp = start_wp + LOOKAHEAD_WPS
+            for i in range(start_wp, start_wp + LOOKAHEAD_WPS):
+                j = i % len(self.base_waypoints.waypoints)
+                tmp = Waypoint()
+                tmp.pose.pose = self.base_waypoints.waypoints[j].pose.pose
+                tmp.twist.twist.linear.x = self.base_waypoints.waypoints[j].twist.twist.linear.x
+                self.final_waypoints.append(tmp)
+
         elif self.state == 1:
             stop_bw = self.traffic_waypoint
-	    end_wp = stop_bw
             
-        # Set pose/speed to base_waypoint's values
-	for i in range(start_wp, end_wp):
-            j = i % len(self.base_waypoints.waypoints)
-            tmp = Waypoint()
-            tmp.pose.pose = self.base_waypoints.waypoints[j].pose.pose
-	    tmp.twist.twist.linear.x = self.base_waypoints.waypoints[j].twist.twist.linear.x
-            self.final_waypoints.append(tmp)
-    	
-	# Complete and modify final_waypoints for brake state	
-	if self.state == 1:
+            # Waypoints before the traffic light -> set pose/speed to base_waypoint's values
+            for i in range(start_wp, stop_bw):
+                j = i % len(self.base_waypoints.waypoints)
+                tmp = Waypoint()
+                tmp.pose.pose = self.base_waypoints.waypoints[j].pose.pose
+                tmp.twist.twist.linear.x = self.base_waypoints.waypoints[j].twist.twist.linear.x
+                self.final_waypoints.append(tmp)
+    
             # Brake to target
             target_wp = len(self.final_waypoints)
-            rospy.logwarn("stop_bw: {}    target_bw: {}".format(stop_bw, target_wp))
-
+            
             # Waypoints after the traffic light -> set pose to base_waypoint's pose and set speed to 0
-	    i_max = max(start_wp + LOOKAHEAD_WPS, stop_bw+1)
+            i_max = max(start_wp + LOOKAHEAD_WPS, stop_bw+1)
             for i in range(stop_bw, i_max):
                 j = i % len(self.base_waypoints.waypoints)
                 tmp = Waypoint()
                 tmp.pose.pose = self.base_waypoints.waypoints[j].pose.pose
-		tmp.twist.twist.linear.x  = 0.0
+                tmp.twist.twist.linear.x  = 0.0
                 self.final_waypoints.append(tmp)
-
+    
             # Waypoints before the traffic light -> set their speed considering a specific braking acceleration
             last = self.final_waypoints[target_wp]
             last.twist.twist.linear.x = 0.0
-	    # compute acceleration
-	    
+            
             for wp in self.final_waypoints[:target_wp][::-1]:
                 dist = self.distance_poses(wp.pose.pose.position, last.pose.pose.position)
                 dist = max(0.0, dist-BRAKE_BUFFER_M)
@@ -201,7 +192,6 @@ class WaypointUpdater(object):
         angle = math.fabs(theta-heading)
         if angle > math.pi / 4.0:
             next_wp += 1
-	next_wp += WP_OFFSET
         return next_wp
 
     """
@@ -260,7 +250,7 @@ class WaypointUpdater(object):
     def pose_cb(self, msg):
         # First thing first, get the current pose
         self.current_pose = msg
-        rospy.logwarn('{} New pose received'.format(rospy.Time().now()))
+        #rospy.logwarn('{} New pose received'.format(rospy.Time().now()))
 
         # Trigger action
         if not USE_TIMER_TRIGGERED:
@@ -273,11 +263,12 @@ class WaypointUpdater(object):
     def waypoints_cb(self, waypoints):
         # Storing waypoints given that they are published only once
         self.base_waypoints = waypoints
+	#rospy.logwarn('Waypoint msg received: {}'.format(self.base_waypoints))
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement
         self.traffic_waypoint = msg.data
-        rospy.logwarn('Traffic msg received: {}'.format(self.traffic_waypoint))
+        #rospy.logwarn('Traffic msg received: {}'.format(self.traffic_waypoint))
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later

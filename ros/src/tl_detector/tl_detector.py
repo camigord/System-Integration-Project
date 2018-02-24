@@ -17,7 +17,7 @@ VISIBLE_DISTANCE = 50
 
 # TODO It calls self.image_cb at regular intervals even if the camera is switched off in the simulator. Deactivate this for complete testing and final release!
 DEBUG_CAMERA_ALWAYS_ON = True
-DEBUG_CAMERA_ALWAYS_ON_RATE = 50
+DEBUG_CAMERA_ALWAYS_ON_RATE = 10
 # Use true states of traffic lights, provided by simulator
 DEBUG_GROUND_TRUTH =  True
 
@@ -60,7 +60,7 @@ class TLDetector(object):
         self.last_wp = -1
         self.state_count = 0
 
-        if DEBUG_CAMERA_ALWAYS_ON:
+        if DEBUG_CAMERA_ALWAYS_ON or DEBUG_GROUND_TRUTH:
             rate = rospy.Rate(DEBUG_CAMERA_ALWAYS_ON_RATE)
             while not rospy.is_shutdown():
                 self.image_cb(0)

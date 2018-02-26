@@ -15,10 +15,10 @@ import math
 STATE_COUNT_THRESHOLD = 3
 VISIBLE_DISTANCE = 50
 # TODO It calls self.image_cb at regular intervals even if the camera is switched off in the simulator. Deactivate this for complete testing and final release!
-DEBUG_CAMERA_ALWAYS_ON = True
-DEBUG_CAMERA_ALWAYS_ON_RATE = 5
+#DEBUG_CAMERA_ALWAYS_ON = True
+#DEBUG_CAMERA_ALWAYS_ON_RATE = 5
 # Use true states of traffic lights, provided by simulator
-DEBUG_GROUND_TRUTH =  True
+DEBUG_GROUND_TRUTH =  False
 
 class TLDetector(object):
     def __init__(self):
@@ -49,11 +49,12 @@ class TLDetector(object):
         self.listener = tf.TransformListener()
 
         # initial TL status is forced to RED so as to avoid car to throttle while we are waiting for the first TL state
-        self.state = TrafficLight.RED    
+        self.state = TrafficLight.RED
         self.last_state = TrafficLight.RED
         self.last_wp = -1
         self.state_count = 0
-    
+
+        '''
         if DEBUG_CAMERA_ALWAYS_ON:
             rate = rospy.Rate(DEBUG_CAMERA_ALWAYS_ON_RATE)
             while not rospy.is_shutdown():
@@ -61,13 +62,17 @@ class TLDetector(object):
                 rate.sleep()
             else:
                 rospy.spin()
+        '''
+
+        rospy.spin()
+
 
     def pose_cb(self, msg):
         self.pose = msg
 
     def waypoints_cb(self, waypoints):
         self.waypoints = waypoints
-        
+
     def traffic_cb(self, msg):
         self.lights = msg.lights
 
@@ -102,7 +107,7 @@ class TLDetector(object):
             self.upcoming_red_light_pub.publish(Int32(self.last_wp))
         self.state_count += 1
 
-    
+
     """
     Creates a pose for the traffic light in the format required by get_closest_waypoint function instead of creating a new one
     """
@@ -201,14 +206,14 @@ class TLDetector(object):
             if DEBUG_GROUND_TRUTH:
                 if hasattr(self, 'lights'):
                     # use ground truth data (positions+state)
-                    light_positions_state = self.lights	
+                    light_positions_state = self.lights
                 else:
                     # me/vehicle/traffic_lights not received yet
                     rospy.logwarn('Traffic_lights not received yet, force to RED')
                     return 292, TrafficLight.RED
-	    
+
             light_positions = self.light_positions
-        	    
+
             i = 0
             for light_position in light_positions:
                 if DEBUG_GROUND_TRUTH:
@@ -218,7 +223,7 @@ class TLDetector(object):
                 else:
                     light_candidate = self.create_light_site(light_position[0], light_position[1], 0.0, 0.0, TrafficLight.UNKNOWN)
                 light_wp = self.get_closest_waypoint(light_candidate.pose.pose)
-		
+
                 # Check that's ahead of us and not behind and is in sight
                 light_distance = self.distance2d(self.waypoints.waypoints[car_wp].pose.pose.position.x,
                                                  self.waypoints.waypoints[car_wp].pose.pose.position.y,
@@ -232,7 +237,7 @@ class TLDetector(object):
                 if DEBUG_GROUND_TRUTH:
                     # Use ground truth provided by simulator
                     state = light.state
-                else: 
+                else:
                     # Nominal mode: light state comes from classifier
                     state = self.get_light_state(light)
                 rospy.logwarn('Next traffic light: {} , color state: {}'.format(closest_light_wp, state))
@@ -242,7 +247,7 @@ class TLDetector(object):
 
         # if messages are not received yet (only for beginning of simulation), return position of first traffic light with RED status
         return 292, TrafficLight.RED
-    
+
 if __name__ == '__main__':
     try:
         TLDetector()

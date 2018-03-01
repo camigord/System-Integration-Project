@@ -13,12 +13,9 @@ import yaml
 import math
 
 STATE_COUNT_THRESHOLD = 3
-VISIBLE_DISTANCE = 50
-# TODO It calls self.image_cb at regular intervals even if the camera is switched off in the simulator. Deactivate this for complete testing and final release!
-#DEBUG_CAMERA_ALWAYS_ON = True
-#DEBUG_CAMERA_ALWAYS_ON_RATE = 5
+VISIBLE_DISTANCE = 150
 # Use true states of traffic lights, provided by simulator
-DEBUG_GROUND_TRUTH =  False
+DEBUG_GROUND_TRUTH =  True
 
 class TLDetector(object):
     def __init__(self):
@@ -53,16 +50,6 @@ class TLDetector(object):
         self.last_state = TrafficLight.RED
         self.last_wp = -1
         self.state_count = 0
-
-        '''
-        if DEBUG_CAMERA_ALWAYS_ON:
-            rate = rospy.Rate(DEBUG_CAMERA_ALWAYS_ON_RATE)
-            while not rospy.is_shutdown():
-                self.image_cb(0)
-                rate.sleep()
-            else:
-                rospy.spin()
-        '''
 
         rospy.spin()
 
@@ -240,7 +227,7 @@ class TLDetector(object):
                 else:
                     # Nominal mode: light state comes from classifier
                     state = self.get_light_state(light)
-                rospy.logwarn('Next traffic light: {} , color state: {}'.format(closest_light_wp, state))
+                rospy.logwarn('[TD] Traffic light id {} in sight, color state: {}'.format(closest_light_wp, state))
                 return closest_light_wp, state
             else:
                 return -1, TrafficLight.UNKNOWN

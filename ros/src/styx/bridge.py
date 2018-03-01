@@ -35,8 +35,8 @@ TYPE = {
     'image':Image
 }
 
-DEBUG_SAMPLING_RATE = 10
-
+#TODO
+DEBUG_SAMPLING_RATE = 5
 
 class Bridge(object):
     def __init__(self, conf, server):

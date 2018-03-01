@@ -24,9 +24,9 @@ as well as to verify your TL classifier.
 TODO (for Yousuf and Aaron): Stopline location for each traffic light.
 '''
 
-LOOKAHEAD_WPS = 50 # Number of waypoints we will publish. You can change this number
+LOOKAHEAD_WPS = 200 # Number of waypoints we will publish. You can change this number
 BRAKE_BUFFER_M = 5 # How far from the stop line we would like the car to stop, to have some margin
-USE_TIMER_TRIGGERED = 0  # Defines whether the action is triggered by a timer or by an incoming pose 
+USE_TIMER_TRIGGERED = 1  # Defines whether the action is triggered by a timer or by an incoming pose 
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -79,29 +79,31 @@ class WaypointUpdater(object):
                 if self.traffic_waypoint != -1:
                     # Get minimum stopping distance
                     min_distance = abs(self.current_velocity**2 / (2*self.breaking_acceleration_limit))
-                    rospy.logwarn("Traffic light distance / min stop distance: {} / {}".format(traffic_light_distance, min_distance))
+                    rospy.logwarn("[WU] Traffic light distance / min stop distance: {:0.1f} / {:0.1f}".format(traffic_light_distance, min_distance))
                     # Decide what to do if there's not enough room to brake
                     if traffic_light_distance > min_distance:
                         self.state = 1
                         # compute braking deceleration
                         self.breaking_acceleration = abs(self.current_velocity**2 / (2*traffic_light_distance))
-                        rospy.logwarn("Braking deceleration: {}".format(self.breaking_acceleration))
+                        rospy.logwarn("[WU] Braking deceleration: {}".format(self.breaking_acceleration))
                     else:
-                        rospy.logwarn("Too late to break !!")
-                        self.state = 0 
+                        rospy.logwarn("[WU] Too late to break !!")
+                        self.state = 0
+                # Nothing in sight
                 else:
                     self.state = 0
 
             elif self.state == 1:
                 if self.traffic_waypoint == -1:
-                    # There's no red anymore, get back to speed
+                    # There's either no traffic light in sight or it's not red anymore, get back to speed
                     self.state = 0
 
-            #rospy.logwarn('Next wp: {}, Traffic wp: {}, State: {}, Vel: {}'.format(next_wp, self.traffic_waypoint, self.state, self.current_velocity))
+            rospy.logwarn('[WU] Next wp: {}, Traffic wp: {}, State: {}, Vel: {:0.1f}'.format(next_wp, self.traffic_waypoint, self.state, self.current_velocity))
 
             # State action, calculate next waypoints
             self.calculate_final_waypoints(next_wp)
-            #self.print_final_waypoints(10)
+            self.print_final_waypoints(10)
+
             # Publish final waypoints
             self.publish_waypoints()
 
@@ -109,14 +111,6 @@ class WaypointUpdater(object):
     Calculate the final waypoints to follow
     """
     # TODO
-    # There a few bugs in this function I can't find. I'm reasonably sure all the rest is fine and they're concentrated here.
-    # When starting, it takes some time to switch from state = 0 to 1. This is not a bug (or at least not a bug here), the reason is that the traffic_waypoint message takes some time to arrive.
-    #
-    # BUGS:
-    # As the traffic lights are all red now as default, the only way to trigger a restart is to drive manually a little beyond the stop line and then switch again back to automatic. For some reason, the self.base_waypoints are not all 11.11 but some are zeros and it takes some time to get rid of these 0s. No fuckin idea why. 
-    #
-    # THING THAT WORK:
-    # The car stops at the traffic light (most of the times, when it doesn't I guess it's a PID problem as the waypoint's velocities are 0)
     def calculate_final_waypoints(self, start_wp):           
 
         # Empty output list
@@ -229,9 +223,9 @@ class WaypointUpdater(object):
     Print the next N final waypoints
     """
     def print_final_waypoints(self, n):
-        s = "final wp: "
+        s = "[WU] Final: "
         for i in range(0,n):
-            s = s + "  {}".format(self.final_waypoints[i].twist.twist.linear.x)
+            s = s + "  {:0.1f}".format(self.final_waypoints[i].twist.twist.linear.x)
         rospy.logwarn(s)
 
     """
@@ -263,7 +257,7 @@ class WaypointUpdater(object):
     def waypoints_cb(self, waypoints):
         # Storing waypoints given that they are published only once
         self.base_waypoints = waypoints
-	#rospy.logwarn('Waypoint msg received: {}'.format(self.base_waypoints))
+    	#rospy.logwarn('Waypoint msg received: {}'.format(self.base_waypoints))
 
     def traffic_cb(self, msg):
         # TODO: Callback for /traffic_waypoint message. Implement

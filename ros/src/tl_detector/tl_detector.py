@@ -49,7 +49,7 @@ class TLDetector(object):
         self.state = TrafficLight.RED
         self.last_state = TrafficLight.RED
         self.last_wp = -1
-        self.state_count = 0
+        self.state_count = STATE_COUNT_THRESHOLD
 
         rospy.spin()
 

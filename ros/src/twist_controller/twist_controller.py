@@ -30,7 +30,8 @@ class Controller(object):
         self.max_lat_accel = kwargs["max_lat_accel"]
         self.max_steer_angle = kwargs["max_steer_angle"]
 
-        self.delta_t = 1.0 / self.sampling_rate
+        #self.delta_t = 1.0 / self.sampling_rate
+        self.last_timestamp = None
 
         # How to calculate brake torque: https://sciencing.com/calculate-brake-torque-6076252.html
         self.torque_constant = (self.vehicle_mass + self.fuel_capacity*GAS_DENSITY) * self.wheel_radius
@@ -51,11 +52,26 @@ class Controller(object):
     def control(self, current_linear_velocity, required_linear_velocity, required_angular_velocity):
         throttle, brake, steering = 0.0, 0.0, 0.0
 
+        # Timing
+        if self.last_timestamp is None:
+            self.last_timestamp = rospy.get_time()
+            return throttle, brake, steering
+        timestamp = rospy.get_time()
+        delta_t = timestamp - self.last_timestamp
+        self.last_timestamp = timestamp
+
+        # To help keeping the car still at traffic lights
+        if abs(required_linear_velocity) < 0.5:
+            self.pid_velocity.reset()
+
         # Get difference between target and current velocities
         vel_error = required_linear_velocity - current_linear_velocity
 
         # Use PID controller to compute desired acceleration
-        desired_accel = self.pid_velocity.step(vel_error, self.delta_t)
+        desired_accel = self.pid_velocity.step(vel_error, delta_t)
+
+        if abs(required_linear_velocity) < 0.5:
+            self.pid_velocity.reset()
 
         if desired_accel > 0.0:
             # If we want to speed up
@@ -67,6 +83,8 @@ class Controller(object):
             if abs(desired_accel) > self.brake_deadband:
                 # Brake only if necessary, otherwise just let the car stop by itself
                 brake = abs(desired_accel) * self.torque_constant
+
+        rospy.logwarn('[CTRL] dT={:0.3f}, out={:0.3f}'.format(delta_t, desired_accel))
 
         steering = self.yaw_controller.get_steering(required_linear_velocity, required_angular_velocity, current_linear_velocity)
 

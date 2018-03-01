@@ -87,7 +87,7 @@ class DBWNode(object):
         rate = rospy.Rate(self.sample_rate)
         while not rospy.is_shutdown():
             # Make sure autonomous system is enabled
-            if self.enabled and self.required_linear_velocity and self.current_linear_velocity:
+            if self.enabled and (self.required_linear_velocity is not None) and (self.current_linear_velocity is not None):
                 throttle, brake, steering = self.controller.control(self.current_linear_velocity,
                                                                     self.required_linear_velocity,
                                                                     self.required_angular_velocity)

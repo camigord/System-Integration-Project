@@ -15,7 +15,7 @@ import math
 STATE_COUNT_THRESHOLD = 3
 VISIBLE_DISTANCE = 150
 # Use true states of traffic lights, provided by simulator
-DEBUG_GROUND_TRUTH =  True
+DEBUG_GROUND_TRUTH = False
 
 class TLDetector(object):
     def __init__(self):
@@ -35,6 +35,7 @@ class TLDetector(object):
         sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
 
         config_string = rospy.get_param("/traffic_light_config")
+        model_filename = rospy.get_param("/traffic_light_model")
         self.config = yaml.load(config_string)
         self.light_positions = self.config['stop_line_positions']
 
@@ -42,7 +43,8 @@ class TLDetector(object):
 
         self.bridge = CvBridge()
         if not DEBUG_GROUND_TRUTH:
-            self.light_classifier = TLClassifier()
+            # TLClassifier now takes the "model_filename", read from parameter "/traffic_light_model", as model
+            self.light_classifier = TLClassifier(model_filename)
         self.listener = tf.TransformListener()
 
         # initial TL status is forced to RED so as to avoid car to throttle while we are waiting for the first TL state

@@ -10,11 +10,13 @@ from utils import label_map_util
 from utils import visualization_utils as vis_util
 
 class TLClassifier(object):
-    def __init__(self):
+    def __init__(self, model_filename):
         #TODO load classifier
         curr_dir = os.path.dirname(os.path.realpath(__file__))
 
-        path_to_ckpt = curr_dir + '/trafficlight_model_sim/frozen_inference_graph.pb'
+        # Use the value provided at init instead of a constant
+        # path_to_ckpt = curr_dir + '/trafficlight_model_sim/frozen_inference_graph.pb'
+        path_to_ckpt = curr_dir + '/trafficlight_model_sim/' + model_filename
 
         path_to_labels = curr_dir + '/label_map.pbtxt'
         num_classes = 4

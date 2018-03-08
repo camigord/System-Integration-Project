@@ -15,7 +15,7 @@ import math
 STATE_COUNT_THRESHOLD = 3
 VISIBLE_DISTANCE = 150
 # Use true states of traffic lights, provided by simulator
-DEBUG_GROUND_TRUTH = False
+DEBUG_GROUND_TRUTH = True
 
 class TLDetector(object):
     def __init__(self):
@@ -42,18 +42,21 @@ class TLDetector(object):
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
 
         self.bridge = CvBridge()
+
+        self.listener = tf.TransformListener()
+
+        self.camera_image = None
+
         if not DEBUG_GROUND_TRUTH:
             # TLClassifier now takes the "model_filename", read from parameter "/traffic_light_model", as model
             self.light_classifier = TLClassifier(model_filename)
-        self.listener = tf.TransformListener()
+        else:
+            rate = rospy.Rate(10)
+            while not rospy.is_shutdown():
+                self.process_traffic_lights()
+                rate.sleep()
 
-        # initial TL status is forced to RED so as to avoid car to throttle while we are waiting for the first TL state
-        self.state = TrafficLight.RED
-        self.last_state = TrafficLight.RED
-        self.last_wp = -1
-        self.state_count = STATE_COUNT_THRESHOLD
-
-        rospy.spin()
+        #rospy.spin()
 
 
     def pose_cb(self, msg):
@@ -66,35 +69,11 @@ class TLDetector(object):
         self.lights = msg.lights
 
     def image_cb(self, msg):
-        """Identifies red lights in the incoming camera image and publishes the index
-            of the waypoint closest to the red light's stop line to /traffic_waypoint
-
-        Args:
-            msg (Image): image from car-mounted camera
-
         """
-        self.has_image = True
+        Callback function for camera images
+        """
         self.camera_image = msg
-        light_wp, state = self.process_traffic_lights()
-
-        '''
-        Publish upcoming red lights at camera frequency.
-        Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
-        of times till we start using it. Otherwise the previous stable state is
-        used.
-        '''
-        #rospy.logwarn('state_count: {}, self.state: {}, state: {}'.format(self.state_count,self.state, state))
-        if self.state != state:
-            self.state_count = 0
-            self.state = state
-        elif self.state_count >= STATE_COUNT_THRESHOLD:
-            self.last_state = self.state
-            light_wp = light_wp if state == TrafficLight.RED else -1
-            self.last_wp = light_wp
-            self.upcoming_red_light_pub.publish(Int32(light_wp))
-        else:
-            self.upcoming_red_light_pub.publish(Int32(self.last_wp))
-        self.state_count += 1
+        self.process_traffic_lights()
 
 
     """
@@ -142,9 +121,8 @@ class TLDetector(object):
 
         Returns:
             int: index of the closest waypoint in self.waypoints
-
         """
-        #TODO implement
+
         dist = float('inf')
         dl = lambda a, b: math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2  + (a.z-b.z)**2)
         wp = 0
@@ -155,62 +133,48 @@ class TLDetector(object):
                 wp = i
         return wp
 
-    def get_light_state(self, light):
+    def get_light_state(self):
         """Determines the current color of the traffic light
-
-        Args:
-            light (TrafficLight): light to classify
-
-        Returns:
-            int: ID of traffic light color (specified in styx_msgs/TrafficLight)
-
         """
-        if(not self.has_image):
-            self.prev_light_loc = None
+        if self.camera_image is None:
             return False
-
-        cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
-
-        #Get classification
-        return self.light_classifier.get_classification(cv_image)
+        else:
+            cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+            #Get classification
+            return self.light_classifier.get_classification(cv_image)
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
-            location and color
-
-        Returns:
-            int: index of waypoint closes to the upcoming stop line for a traffic light (-1 if none exists)
-            int: ID of traffic light color (specified in styx_msgs/TrafficLight)
-
+            location and color. It then publishes
         """
+
         light = None
         # Proceed only if the first messages have been received
         if hasattr(self, 'pose') and hasattr(self, 'waypoints'):
-            # List of positions that correspond to the line to stop in front of for a given intersection
+            # Get position of car
             car_wp = self.get_closest_waypoint(self.pose.pose)
 
-            #TODO find the closest visible traffic light (if one exists)
-
-            # Search if there's a traffic light ahead of us
+            # If using GT, make sure the data have been received
             if DEBUG_GROUND_TRUTH:
                 if hasattr(self, 'lights'):
-                    # use ground truth data (positions+state)
+                    # Real state of traffic lights
                     light_positions_state = self.lights
                 else:
-                    # me/vehicle/traffic_lights not received yet
-                    rospy.logwarn('Traffic_lights not received yet, force to RED')
-                    return 292, TrafficLight.RED
+                    # If message has not been received yet
+                    rospy.logwarn('Traffic_lights not received yet')
+                    return
 
+            # Stop poritions for each traffic light
             light_positions = self.light_positions
 
-            i = 0
-            for light_position in light_positions:
+            min_distance = float('inf')
+            for i, light_position in enumerate(light_positions):
                 if DEBUG_GROUND_TRUTH:
                     true_state = light_positions_state[i].state
                     light_candidate = self.create_light_site(light_position[0], light_position[1], 0.0, 0.0, true_state)
-                    i +=1
                 else:
                     light_candidate = self.create_light_site(light_position[0], light_position[1], 0.0, 0.0, TrafficLight.UNKNOWN)
+
                 light_wp = self.get_closest_waypoint(light_candidate.pose.pose)
 
                 # Check that's ahead of us and not behind and is in sight
@@ -218,9 +182,12 @@ class TLDetector(object):
                                                  self.waypoints.waypoints[car_wp].pose.pose.position.y,
                                                  self.waypoints.waypoints[light_wp].pose.pose.position.x,
                                                  self.waypoints.waypoints[light_wp].pose.pose.position.y)
-                if (light_wp % len(self.waypoints.waypoints)) > (car_wp % len(self.waypoints.waypoints)) and (light_distance < VISIBLE_DISTANCE):
+
+                # Getting the closest traffic light which is ahead of us and within visible distance
+                if (light_wp % len(self.waypoints.waypoints)) > (car_wp % len(self.waypoints.waypoints)) and (light_distance < VISIBLE_DISTANCE) and (light_distance < min_distance):
                     light = light_candidate
                     closest_light_wp = light_wp
+                    min_distance = light_distance
 
             if light:
                 if DEBUG_GROUND_TRUTH:
@@ -228,14 +195,22 @@ class TLDetector(object):
                     state = light.state
                 else:
                     # Nominal mode: light state comes from classifier
-                    state = self.get_light_state(light)
+                    state = self.get_light_state()
                 rospy.logwarn('[TD] Traffic light id {} in sight, color state: {}'.format(closest_light_wp, state))
-                return closest_light_wp, state
+                light_wp = closest_light_wp
             else:
-                return -1, TrafficLight.UNKNOWN
+                light_wp = -1
+                state = TrafficLight.UNKNOWN
 
-        # if messages are not received yet (only for beginning of simulation), return position of first traffic light with RED status
-        return 292, TrafficLight.RED
+        else: # if messages are not received yet (only for beginning of simulation), return position of first traffic light with RED status
+            # light_wp = 292 will raise a problem in second test
+            light_wp = -1
+            state = TrafficLight.RED
+
+        if state == TrafficLight.RED:
+            self.upcoming_red_light_pub.publish(Int32(light_wp))
+        else:
+            self.upcoming_red_light_pub.publish(Int32(-1))
 
 if __name__ == '__main__':
     try:

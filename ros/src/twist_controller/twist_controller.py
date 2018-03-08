@@ -6,15 +6,18 @@ from yaw_controller import YawController
 GAS_DENSITY = 2.858
 ONE_MPH = 0.44704
 
-# TODO: Tune parameters
+'''
 # PID parameters
 VEL_PID_P = 0.8
 VEL_PID_I = 0.0005
 VEL_PID_D = 0.01
+'''
 
-'''
-LPF_TAU = 0.2
-'''
+VEL_PID_P = 5
+VEL_PID_I = 0.5
+VEL_PID_D = 0.5
+
+DEBUG_ENABLE_LPF = True
 
 class Controller(object):
     def __init__(self, *args, **kwargs):
@@ -42,11 +45,12 @@ class Controller(object):
         # Yaw controller
         self.yaw_controller = YawController(wheel_base = self.wheel_base,
                                             steer_ratio = self.steer_ratio,
-                                            min_speed = 5.0,                    # Minimum speed before trying to steer
+                                            min_speed = 0.5,                    # Minimum speed before trying to steer
                                             max_lat_accel = self.max_lat_accel,
                                             max_steer_angle = self.max_steer_angle)
 
-        # self.low_pass_filter = LowPassFilter(LPF_TAU, self.delta_t)
+        self.s_lpf = LowPassFilter(tau = 3, ts = 1)
+        self.t_lpf = LowPassFilter(tau = 3, ts = 1)
 
 
     def control(self, current_linear_velocity, required_linear_velocity, required_angular_velocity):
@@ -69,6 +73,12 @@ class Controller(object):
 
         # Use PID controller to compute desired acceleration
         desired_accel = self.pid_velocity.step(vel_error, delta_t)
+        steering = self.yaw_controller.get_steering(required_linear_velocity, required_angular_velocity, current_linear_velocity)
+
+        # Low pass filtering commands
+        if DEBUG_ENABLE_LPF:
+            steering = self.s_lpf.filt(steering)
+            throttle = self.t_lpf.filt(throttle)
 
         if abs(required_linear_velocity) < 0.5:
             self.pid_velocity.reset()
@@ -84,9 +94,7 @@ class Controller(object):
                 # Brake only if necessary, otherwise just let the car stop by itself
                 brake = abs(desired_accel) * self.torque_constant
 
-        rospy.logwarn('[CTRL] dT={:0.3f}, out={:0.3f}'.format(delta_t, desired_accel))
-
-        steering = self.yaw_controller.get_steering(required_linear_velocity, required_angular_velocity, current_linear_velocity)
+        # rospy.logwarn('[CTRL] dT={:0.3f}, out={:0.3f}'.format(delta_t, desired_accel))
 
         # Return throttle, brake, steer
         return throttle, brake, steering

@@ -50,14 +50,12 @@ class TLDetector(object):
         if not DEBUG_GROUND_TRUTH:
             # TLClassifier now takes the "model_filename", read from parameter "/traffic_light_model", as model
             self.light_classifier = TLClassifier(model_filename)
+            rospy.spin()
         else:
             rate = rospy.Rate(10)
             while not rospy.is_shutdown():
                 self.process_traffic_lights()
                 rate.sleep()
-
-        #rospy.spin()
-
 
     def pose_cb(self, msg):
         self.pose = msg

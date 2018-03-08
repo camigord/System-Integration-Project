@@ -35,7 +35,7 @@ class TLDetector(object):
         sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
 
         config_string = rospy.get_param("/traffic_light_config")
-        model_filename = rospy.get_param("/traffic_light_model")
+        model_filename = rospy.get_param("/traffic_light_model", "frozen_inference_graph.pb")
         self.config = yaml.load(config_string)
         self.light_positions = self.config['stop_line_positions']
 

@@ -67,6 +67,11 @@ class Controller(object):
         # To help keeping the car still at traffic lights
         if abs(required_linear_velocity) < 0.5:
             self.pid_velocity.reset()
+            # Keep the brake pedal down when at the traffic light to prevent "wheezing"
+            throttle = 0
+            brake = 100
+            steering = 0
+            return throttle, brake, steering
 
         # Get difference between target and current velocities
         vel_error = required_linear_velocity - current_linear_velocity

@@ -31,11 +31,12 @@ TYPE = {
     'steer_cmd': SteeringCmd,
     'brake_cmd': BrakeCmd,
     'throttle_cmd': ThrottleCmd,
-    'path_draw': Lane,
+    #'path_draw': Lane,
     'image':Image
 }
 
 #TODO
+SAMPLE_IMAGES = False
 DEBUG_SAMPLING_RATE = 5
 
 class Bridge(object):
@@ -53,7 +54,7 @@ class Bridge(object):
             '/vehicle/steering_cmd': self.callback_steering,
             '/vehicle/throttle_cmd': self.callback_throttle,
             '/vehicle/brake_cmd': self.callback_brake,
-        '/final_waypoints': self.callback_path
+            #'/final_waypoints': self.callback_path
         }
 
         self.subscribers = [rospy.Subscriber(e.topic, TYPE[e.type], self.callbacks[e.topic])
@@ -179,17 +180,25 @@ class Bridge(object):
         self.publishers['dbw_status'].publish(Bool(data))
 
     def publish_camera(self, data):
-        if self.counter % DEBUG_SAMPLING_RATE == 0:
+        if SAMPLE_IMAGES:
+            if self.counter % DEBUG_SAMPLING_RATE == 0:
+                imgString = data["image"]
+                image = PIL_Image.open(BytesIO(base64.b64decode(imgString)))
+                image_array = np.asarray(image)
+
+                image_message = self.bridge.cv2_to_imgmsg(image_array, encoding="rgb8")
+                self.publishers['image'].publish(image_message)
+
+                self.counter = 1
+            else:
+                self.counter += 1
+        else:
             imgString = data["image"]
             image = PIL_Image.open(BytesIO(base64.b64decode(imgString)))
             image_array = np.asarray(image)
 
             image_message = self.bridge.cv2_to_imgmsg(image_array, encoding="rgb8")
             self.publishers['image'].publish(image_message)
-
-            self.counter = 1
-        else:
-            self.counter += 1
 
 
     def callback_steering(self, data):
@@ -201,6 +210,7 @@ class Bridge(object):
     def callback_brake(self, data):
         self.server('brake', data={'brake': str(data.pedal_cmd)})
 
+    '''
     def callback_path(self, data):
         x_values = []
         y_values = []
@@ -214,3 +224,4 @@ class Bridge(object):
             z_values.append(z)
 
         self.server('drawline', data={'next_x': x_values, 'next_y': y_values, 'next_z': z_values})
+    '''

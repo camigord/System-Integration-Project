@@ -9,6 +9,8 @@ import numpy as np
 from utils import label_map_util
 from utils import visualization_utils as vis_util
 
+DEBUG_ENABLE_CLASSIFIER = True
+
 class TLClassifier(object):
     def __init__(self, model_filename):
         #TODO load classifier
@@ -63,33 +65,32 @@ class TLClassifier(object):
 
         """
         #TODO implement light color prediction
-
-        image_expanded = np.expand_dims(image, axis=0)
-        with self.detection_graph.as_default():
-            (boxes, scores, classes, num) = self.sess.run(
-            [self.boxes, self.scores,
-            self.classes, self.num_detections],
-            feed_dict={self.image_tensor: image_expanded})
-
-        boxes = np.squeeze(boxes)
-        scores = np.squeeze(scores)
-        classes = np.squeeze(classes).astype(np.int32)
-
         #set unknown as default
         current_light = TrafficLight.UNKNOWN
 
-        max_score_idx = scores.argmax()
-        max_score = max(scores)
+        if DEBUG_ENABLE_CLASSIFIER:
+            image_expanded = np.expand_dims(image, axis=0)
+            with self.detection_graph.as_default():
+                (boxes, scores, classes, num) = self.sess.run(
+                [self.boxes, self.scores,
+                self.classes, self.num_detections],
+                feed_dict={self.image_tensor: image_expanded})
 
-        if scores[max_score_idx] > 0.5:
-            light_color = self.category_index[classes[max_score_idx]]['name']
-            if light_color == 'Green':
-                current_light = TrafficLight.GREEN
-            elif light_color == 'Red':
-                current_light = TrafficLight.RED
-            elif light_color == 'Yellow':
-                current_light = TrafficLight.YELLOW
+            boxes = np.squeeze(boxes)
+            scores = np.squeeze(scores)
+            classes = np.squeeze(classes).astype(np.int32)
+
+            max_score_idx = scores.argmax()
+            max_score = max(scores)
+
+            if scores[max_score_idx] > 0.5:
+                light_color = self.category_index[classes[max_score_idx]]['name']
+                if light_color == 'Green':
+                    current_light = TrafficLight.GREEN
+                elif light_color == 'Red':
+                    current_light = TrafficLight.RED
+                elif light_color == 'Yellow':
+                    current_light = TrafficLight.YELLOW
 
 
         return current_light
-        #return TrafficLight.UNKNOWN

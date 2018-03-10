@@ -12,10 +12,9 @@ import cv2
 import yaml
 import math
 
-STATE_COUNT_THRESHOLD = 3
 VISIBLE_DISTANCE = 100
 # Use true states of traffic lights, provided by simulator
-DEBUG_GROUND_TRUTH = True
+DEBUG_GROUND_TRUTH = False
 
 class TLDetector(object):
     def __init__(self):
@@ -135,8 +134,10 @@ class TLDetector(object):
         """Determines the current color of the traffic light
         """
         if self.camera_image is None:
+            rospy.logwarn('[Detector] No image')
             return False
         else:
+            #return TrafficLight.UNKNOWN
             cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
             #Get classification
             return self.light_classifier.get_classification(cv_image)

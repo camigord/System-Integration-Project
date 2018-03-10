@@ -90,6 +90,7 @@ class WaypointUpdater(object):
                         self.breaking_acceleration = abs(self.current_velocity**2 / (2*traffic_light_distance))
                         rospy.logwarn("[WU] Braking deceleration: {}".format(self.breaking_acceleration))
                     else:
+                        # NOTE: Is this really the behavior we want? Should we not try to break even if we violate the acceleration limit?
                         rospy.logwarn("[WU] Too late to break !!")
                         self.state = 0
                 # Nothing in sight

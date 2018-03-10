@@ -6,18 +6,17 @@ from yaw_controller import YawController
 GAS_DENSITY = 2.858
 ONE_MPH = 0.44704
 
-'''
+
 # PID parameters
 VEL_PID_P = 0.8
-VEL_PID_I = 0.0005
+VEL_PID_I = 0.0001
 VEL_PID_D = 0.01
 '''
-
 VEL_PID_P = 5
 VEL_PID_I = 0.5
 VEL_PID_D = 0.5
-
-DEBUG_ENABLE_LPF = True
+'''
+DEBUG_ENABLE_LPF = False
 
 class Controller(object):
     def __init__(self, *args, **kwargs):
@@ -85,6 +84,7 @@ class Controller(object):
             steering = self.s_lpf.filt(steering)
             throttle = self.t_lpf.filt(throttle)
 
+        # NOTE: this would not be necessary again
         if abs(required_linear_velocity) < 0.5:
             self.pid_velocity.reset()
 
@@ -99,7 +99,7 @@ class Controller(object):
                 # Brake only if necessary, otherwise just let the car stop by itself
                 brake = abs(desired_accel) * self.torque_constant
 
-        # rospy.logwarn('[CTRL] dT={:0.3f}, out={:0.3f}'.format(delta_t, desired_accel))
+        #rospy.logwarn('[CTRL] dT={:0.3f}, required_vel={:0.3f}, vel_error={:0.3f}, throttle={:0.3f}'.format(delta_t, required_linear_velocity, vel_error, throttle))
 
         # Return throttle, brake, steer
         return throttle, brake, steering

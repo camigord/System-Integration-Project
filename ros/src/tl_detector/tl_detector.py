@@ -12,6 +12,8 @@ import cv2
 import yaml
 import math
 
+STATE_COUNT_THRESHOLD = 2
+
 VISIBLE_DISTANCE = 100
 # Use true states of traffic lights, provided by simulator
 DEBUG_GROUND_TRUTH = False
@@ -42,9 +44,11 @@ class TLDetector(object):
 
         self.bridge = CvBridge()
 
-        self.listener = tf.TransformListener()
-
         self.camera_image = None
+        self.state = TrafficLight.UNKNOWN
+        self.last_state = TrafficLight.UNKNOWN
+        self.state_count = 0
+        self.last_wp = -1
 
         if not DEBUG_GROUND_TRUTH:
             # TLClassifier now takes the "model_filename", read from parameter "/traffic_light_model", as model
@@ -140,7 +144,12 @@ class TLDetector(object):
             #return TrafficLight.UNKNOWN
             cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
             #Get classification
-            return self.light_classifier.get_classification(cv_image)
+            state = self.light_classifier.get_classification(cv_image)
+
+            # If classification result is unknown, return last state
+            if state == TrafficLight.UNKNOWN and self.last_state:
+                state = self.last_state
+            return state
 
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines its
@@ -206,10 +215,25 @@ class TLDetector(object):
             light_wp = -1
             state = TrafficLight.RED
 
+        if self.state != state:
+            self.state_count = 0
+            self.state = state
+        elif self.state_count >= STATE_COUNT_THRESHOLD:
+            self.last_state = self.state
+            light_wp = light_wp if state in [TrafficLight.RED, TrafficLight.YELLOW] else -1
+            self.last_wp = light_wp
+            self.upcoming_red_light_pub.publish(Int32(light_wp))
+        else:
+            self.upcoming_red_light_pub.publish(Int32(self.last_wp))
+
+        self.state_count += 1
+
+        '''
         if state == TrafficLight.RED:
             self.upcoming_red_light_pub.publish(Int32(light_wp))
         else:
             self.upcoming_red_light_pub.publish(Int32(-1))
+        '''
 
 if __name__ == '__main__':
     try:

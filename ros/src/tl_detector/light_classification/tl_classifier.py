@@ -1,5 +1,6 @@
 from styx_msgs.msg import TrafficLight
 
+import rospy
 import os
 import sys
 import tensorflow as tf
@@ -53,7 +54,6 @@ class TLClassifier(object):
 
         self.category_index = label_map_util.create_category_index(categories)
 
-
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
 
@@ -69,6 +69,7 @@ class TLClassifier(object):
         current_light = TrafficLight.UNKNOWN
 
         if DEBUG_ENABLE_CLASSIFIER:
+
             image_expanded = np.expand_dims(image, axis=0)
             with self.detection_graph.as_default():
                 (boxes, scores, classes, num) = self.sess.run(
@@ -85,12 +86,15 @@ class TLClassifier(object):
 
             if scores[max_score_idx] > 0.5:
                 light_color = self.category_index[classes[max_score_idx]]['name']
+                rospy.logwarn("[Classifier] {}".format(light_color))
                 if light_color == 'Green':
                     current_light = TrafficLight.GREEN
                 elif light_color == 'Red':
                     current_light = TrafficLight.RED
                 elif light_color == 'Yellow':
                     current_light = TrafficLight.YELLOW
+            else:
+                rospy.logwarn("[Not sure!]")
 
 
         return current_light

@@ -11,12 +11,14 @@ import tf
 import cv2
 import yaml
 import math
+import os
 
 STATE_COUNT_THRESHOLD = 2
 
 VISIBLE_DISTANCE = 100
 # Use true states of traffic lights, provided by simulator
 DEBUG_GROUND_TRUTH = False
+DEBUG_SAVE_IMAGES = False
 
 class TLDetector(object):
     def __init__(self):
@@ -50,6 +52,10 @@ class TLDetector(object):
         self.state_count = 0
         self.last_wp = -1
 
+        if DEBUG_SAVE_IMAGES:
+            self.image_counter = 0
+            self.save_dir = '/images/'
+
         if not DEBUG_GROUND_TRUTH:
             # TLClassifier now takes the "model_filename", read from parameter "/traffic_light_model", as model
             self.light_classifier = TLClassifier(model_filename)
@@ -74,8 +80,19 @@ class TLDetector(object):
         Callback function for camera images
         """
         self.camera_image = msg
+        if DEBUG_SAVE_IMAGES:
+            self.img_save(msg)
         self.process_traffic_lights()
 
+    def img_save(self, img):
+        curr_dir = os.path.dirname(os.path.realpath(__file__))
+        img.encoding = "rgb8"
+        cv_image = CvBridge().imgmsg_to_cv2(img, "bgr8")
+        file_name = curr_dir + self.save_dir+ '/img_'+'%06d'% self.image_counter +'.png'
+        rospy.logwarn("file_name = %s", file_name)
+        cv2.imwrite(file_name, cv_image)
+        self.image_counter += 1
+        rospy.logwarn("[TD] Image saved!")
 
     """
     Creates a pose for the traffic light in the format required by get_closest_waypoint function instead of creating a new one
@@ -141,8 +158,10 @@ class TLDetector(object):
             rospy.logwarn('[Detector] No image')
             return False
         else:
+            self.camera_image.encoding = "rgb8"
             #return TrafficLight.UNKNOWN
-            cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+            cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "rgb8")
+            #cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
             #Get classification
             state = self.light_classifier.get_classification(cv_image)
 

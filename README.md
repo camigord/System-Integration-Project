@@ -7,12 +7,13 @@ Programming a Real Self-Driving Car for the UDACITY Nanodegree
 ## The Happy Crashers Team:
 
 |     Image              |     Name      |  LinkedIn    |     email   |
-|------------------------|---------------|----------------|---------------|-------------|-------------|
+|------------------------|---------------|----------------|---------------|
 | <img src="./assets/profile.jpg" alt="Camilo Gordillo" width="150" height="150"> | Camilo Gordillo | [Camilo](https://de.linkedin.com/in/camilogordillo/en) | <camigord@gmail.com> |
 | <img src="./assets/profile.jpg" alt="Stefano Salati" width="150" height="150"> | Stefano Salati | [Stefano](https://www.linkedin.com/in/stefanosalati/) | <stef.salati@gmail.com> |
 | <img src="./assets/profile.jpg" alt="Stefan Rademacher" width="150" height="150"> | Stefan Rademacher | [Stefan](https://www.linkedin.com/in/stefan-rademacher/) |  |
 | <img src="./assets/profile.jpg" alt="Thomas GRELIER" width="150" height="150"> | Thomas GRELIER | [Thomas](https://www.linkedin.com/in/thomas-grelier/) |  |
----
+
+
 ## Installation
 
 Please use **one** of the two installation options, either native **or** docker installation.

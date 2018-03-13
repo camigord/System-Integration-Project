@@ -95,7 +95,7 @@ source devel/setup.sh
 #### Simulator
 
 We have developed two classifiers, the first one is a SSD, the second a RCNN. Simulation works well with both of them.
-* To launch project with SSD classifier, type the following command:
+* To launch project with SSD classifier, type the following command. This is also used if no model parameter is specified or if the original launch file (that doesn't specify this parameter) is used.
 ```bash
 roslaunch launch/styx.launch model:='frozen_inference_graph_simulation_ssd.pb'
 ```

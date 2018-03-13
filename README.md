@@ -11,7 +11,7 @@ Programming a Real Self-Driving Car for the UDACITY Nanodegree
 | <img src="./assets/c_gordillo.jpg" alt="Camilo Gordillo" width="150" height="150"> | Camilo Gordillo | [Camilo](https://de.linkedin.com/in/camilogordillo/en) | <camigord@gmail.com> |
 | <img src="./assets/s_salati.jpg" alt="Stefano Salati" width="150" height="150"> | Stefano Salati | [Stefano](https://www.linkedin.com/in/stefanosalati/) | <stef.salati@gmail.com> |
 | <img src="./assets/profile.jpg" alt="Stefan Rademacher" width="150" height="150"> | Stefan Rademacher | [Stefan](https://www.linkedin.com/in/stefan-rademacher/) |  |
-| <img src="./assets/profile.jpg" alt="Thomas GRELIER" width="150" height="150"> | Thomas GRELIER | [Thomas](https://www.linkedin.com/in/thomas-grelier/) | <masto.grelier@gmail.com> |
+| <img src="./assets/t_grelier.jpg" alt="Thomas GRELIER" width="150" height="150"> | Thomas GRELIER | [Thomas](https://www.linkedin.com/in/thomas-grelier/) | <masto.grelier@gmail.com> |
 
 ## Project description
 
@@ -22,7 +22,7 @@ The car behaviour is regulated by a FSM with two states: normal driving and brak
 
 The car drives normally when no traffic light is detected within a range of 100m or when the detected traffic light is green. This is obtained by setting the speed of all waypoints ahead to their default values.
 
-As soon as a red traffic light is detected, the system computes the minimum braking distance to check if a braking is possible. If yes, a braking deceleration - dependent on the current speed and distance of the traffic light - is applied and the speed of all waypoints between the car and the traffic light is set so it gently decreaeses to zero at the light. All speeds of waypoints ahead of the traffic light are set to zero.
+As soon as a red traffic light is detected, the system computes the minimum braking distance to check if a braking is possible. If yes, a braking deceleration - dependent on the current speed and distance of the traffic light - is applied and the speed of all waypoints between the car and the traffic light is set so it gently decrease to zero at the light. All speeds of waypoints ahead of the traffic light are set to zero.
 
 <img src="./assets/a_brake.gif" alt="a_{brake} = \frac{v_{car}^2}{2*d_{light}}">
 

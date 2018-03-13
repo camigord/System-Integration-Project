@@ -11,9 +11,13 @@ from flask import Flask, render_template
 from bridge import Bridge
 from conf import conf
 
+DEBUG_TESTING = True
 sio = socketio.Server()
 app = Flask(__name__)
-msgs = []
+if DEBUG_TESTING:
+    msgs = {}
+else:
+    msgs = []
 
 dbw_enable = False
 
@@ -22,9 +26,13 @@ def connect(sid, environ):
     print("connect ", sid)
 
 def send(topic, data):
-    s = 1
-    msgs.append((topic, data))
-    #sio.emit(topic, data=json.dumps(data), skip_sid=True)
+    if DEBUG_TESTING:
+        msgs[topic] = data
+    else:
+        s = 1
+        msgs.append((topic, data))
+        #sio.emit(topic, data=json.dumps(data), skip_sid=True)
+
 
 bridge = Bridge(conf, send)
 
@@ -36,7 +44,11 @@ def telemetry(sid, data):
         bridge.publish_dbw_status(dbw_enable)
     bridge.publish_odometry(data)
     for i in range(len(msgs)):
-        topic, data = msgs.pop(0)
+        if DEBUG_TESTING:
+            topic, data = msgs.popitem()
+        else:
+            topic, data = msgs.pop(0)
+
         sio.emit(topic, data=data, skip_sid=True)
 
 @sio.on('control')

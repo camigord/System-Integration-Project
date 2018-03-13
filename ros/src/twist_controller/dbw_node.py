@@ -2,7 +2,7 @@
 
 import rospy
 from std_msgs.msg import Bool
-from dbw_mkz_msgs.msg import ThrottleCmd, SteeringCmd, BrakeCmd, SteeringReport
+from dbw_mkz_msgs.msg import ThrottleCmd, SteeringCmd, BrakeCmd
 from geometry_msgs.msg import TwistStamped
 import math
 
@@ -44,6 +44,7 @@ class DBWNode(object):
         self.required_linear_velocity = None
         self.required_angular_velocity = None
         self.current_linear_velocity = None
+        self.steer_feedback = None
 
         vehicle_mass = rospy.get_param('~vehicle_mass', 1736.35)
         fuel_capacity = rospy.get_param('~fuel_capacity', 13.5)

@@ -22,6 +22,6 @@
     <param name="traffic_light_config" textfile="$(find tl_detector)/sim_traffic_light_config.yaml" />
 
     <!--Set a specific model to use -->
-    <arg name="model" default="frozen_inference_graph.pb"/>
+    <arg name="model" default="frozen_inference_graph_simulation_ssd.pb"/>
     <param name="traffic_light_model" value="$(arg model)" />
 </launch>

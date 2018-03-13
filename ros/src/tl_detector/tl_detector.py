@@ -38,7 +38,7 @@ class TLDetector(object):
         sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
 
         config_string = rospy.get_param("/traffic_light_config")
-        model_filename = rospy.get_param("/traffic_light_model", "frozen_inference_graph.pb")
+        model_filename = rospy.get_param("/traffic_light_model", "frozen_inference_graph_simulation_ssd")
         self.config = yaml.load(config_string)
         self.light_positions = self.config['stop_line_positions']
 
@@ -163,7 +163,10 @@ class TLDetector(object):
             cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "rgb8")
             #cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
             #Get classification
+            # tic = rospy.get_time()
             state = self.light_classifier.get_classification(cv_image)
+            # tac = rospy.get_time()
+            # rospy.logwarn("Detection time: {:1.6f}s".format(tac-tic))
 
             # If classification result is unknown, return last state
             if state == TrafficLight.UNKNOWN and self.last_state:

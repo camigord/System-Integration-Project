@@ -9,7 +9,7 @@ Programming a Real Self-Driving Car for the UDACITY Nanodegree
 |     Image              |     Name      |  LinkedIn    |     email   |
 |------------------------|---------------|----------------|---------------|
 | <img src="./assets/c_gordillo.jpg" alt="Camilo Gordillo" width="150" height="150"> | Camilo Gordillo | [Camilo](https://de.linkedin.com/in/camilogordillo/en) | <camigord@gmail.com> |
-| <img src="./assets/profile.jpg" alt="Stefano Salati" width="150" height="150"> | Stefano Salati | [Stefano](https://www.linkedin.com/in/stefanosalati/) | <stef.salati@gmail.com> |
+| <img src="./assets/s_salati.jpg" alt="Stefano Salati" width="150" height="150"> | Stefano Salati | [Stefano](https://www.linkedin.com/in/stefanosalati/) | <stef.salati@gmail.com> |
 | <img src="./assets/profile.jpg" alt="Stefan Rademacher" width="150" height="150"> | Stefan Rademacher | [Stefan](https://www.linkedin.com/in/stefan-rademacher/) |  |
 | <img src="./assets/profile.jpg" alt="Thomas GRELIER" width="150" height="150"> | Thomas GRELIER | [Thomas](https://www.linkedin.com/in/thomas-grelier/) | <masto.grelier@gmail.com> |
 
@@ -29,6 +29,14 @@ As soon as a red traffic light is detected, the system computes the minimum brak
 <img src="./assets/v_i.gif" alt="v_{i} = \left\{\begin{matrix}  \sqrt{2*a_{brake} * d_{i}} & \textrm{for waypoints before traffic light} \\ 0 & \textrm{for waypoints beyond traffic light} \end{matrix}\right.">
 
 It's worth noting this scenario: a red light is detected and the car starts braking gently, if the light turns green while the car is braking, the car switches back to normal driving and accelerates to normal speed. This replicates the usual human behavior of not waiting the last moment to brake but to let go as soon as a red light is seen.
+
+Throttle and brake pedal are then controlled by a PID, tuned with:
+
+| Parameter | Value  |
+|-----------|--------|
+| VEL_PID_P | 0.8    |
+| VEL_PID_I | 0.0001 |
+| VEL_PID_D | 0.01   |
 
 ## Installation
 ### Native Installation

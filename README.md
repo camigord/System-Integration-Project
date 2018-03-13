@@ -17,7 +17,18 @@ Programming a Real Self-Driving Car for the UDACITY Nanodegree
 
 The objective of this project was to write ROS nodes to implement core functionality of the autonomous vehicle system. This included traffic light detection, waypoint planner and control.
 
-TO BE COMPLETED
+### Control strategy
+The car behaviour is regulated by a FSM with two states: normal driving and braking.
+
+The car drives normally when no traffic light is detected within a range of 100m or when the detected traffic light is green. This is obtained by setting the speed of all waypoints ahead to their default values.
+
+As soon as a red traffic light is detected, the system computes the minimum braking distance to check if a braking is possible. If yes, a braking deceleration - dependent on the current speed and distance of the traffic light - is applied and the speed of all waypoints between the car and the traffic light is set so it gently decreaeses to zero at the light. All speeds of waypoints ahead of the traffic light are set to zero.
+
+<img src="./assets/a_brake.gif" alt="a_{brake} = \frac{v_{car}^2}{2*d_{light}}">
+
+<img src="./assets/v_i.gif" alt="v_{i} = \left\{\begin{matrix}  \sqrt{2*a_{brake} * d_{i}} & \textrm{for waypoints before traffic light} \\ 0 & \textrm{for waypoints beyond traffic light} \end{matrix}\right.">
+
+It's worth noting this scenario: a red light is detected and the car starts braking gently, if the light turns green while the car is braking, the car switches back to normal driving and accelerates to normal speed. This replicates the usual human behavior of not waiting the last moment to brake but to let go as soon as a red light is seen.
 
 ## Installation
 ### Native Installation

@@ -1,10 +1,19 @@
-# System Integration Project
+# UDACITY - System Integration Project
 ---
 
 Programming a Real Self-Driving Car for the UDACITY Nanodegree
 
 
-This is the project repo for the final project of the Udacity Self-Driving Car Nanodegree: Programming a Real Self-Driving Car. For more information about the project, see the project introduction [here](https://classroom.udacity.com/nanodegrees/nd013/parts/6047fe34-d93c-4f50-8336-b70ef10cb4b2/modules/e1a23b06-329a-4684-a717-ad476f0d8dff/lessons/462c933d-9f24-42d3-8bdc-a08a5fc866e4/concepts/5ab4b122-83e6-436d-850f-9f4d26627fd9).
+## The Happy Crashers Team:
+
+|     Image              |     Name      |  LinkedIn    |     email   |
+|------------------------|---------------|----------------|---------------|-------------|-------------|
+| <img src="./assets/profile.jpg" alt="Camilo Gordillo" width="150" height="150"> | Camilo Gordillo | [Camilo](https://de.linkedin.com/in/camilogordillo/en) | <camigord@gmail.com> |
+| <img src="./assets/profile.jpg" alt="Stefano Salati" width="150" height="150"> | Stefano Salati | [Stefano](https://www.linkedin.com/in/stefanosalati/) | <stef.salati@gmail.com> |
+| <img src="./assets/profile.jpg" alt="Stefan Rademacher" width="150" height="150"> | Stefan Rademacher | [Stefan](https://www.linkedin.com/in/stefan-rademacher/) |  |
+| <img src="./assets/profile.jpg" alt="Thomas GRELIER" width="150" height="150"> | Thomas GRELIER | [Thomas](https://www.linkedin.com/in/thomas-grelier/) |  |
+---
+## Installation
 
 Please use **one** of the two installation options, either native **or** docker installation.
 
@@ -44,21 +53,22 @@ To set up port forwarding, please refer to the [instructions from term 2](https:
 ### Usage
 
 1. Clone the project repository
+
 ```bash
-git clone https://github.com/udacity/CarND-Capstone.git
+   git clone https://github.com/camigord/System-Integration-Project.git
 ```
 
 2. Install python dependencies
 ```bash
-cd CarND-Capstone
-pip install -r requirements.txt
+   cd System-Integration-Project
+   pip install -r requirements.txt
 ```
 3. Make and run styx
 ```bash
-cd ros
-catkin_make
-source devel/setup.sh
-roslaunch launch/styx.launch
+   cd ros
+   catkin_make
+   source devel/setup.sh
+   roslaunch launch/styx.launch
 ```
 4. Run the simulator
 
@@ -66,15 +76,15 @@ roslaunch launch/styx.launch
 1. Download [training bag](https://s3-us-west-1.amazonaws.com/udacity-selfdrivingcar/traffic_light_bag_file.zip) that was recorded on the Udacity self-driving car.
 2. Unzip the file
 ```bash
-unzip traffic_light_bag_file.zip
+   unzip traffic_light_bag_file.zip
 ```
 3. Play the bag file
 ```bash
-rosbag play -l traffic_light_bag_file/traffic_light_training.bag
+   rosbag play -l traffic_light_bag_file/traffic_light_training.bag
 ```
 4. Launch your project in site mode
 ```bash
-cd CarND-Capstone/ros
-roslaunch launch/site.launch
+   cd System-Integration-Project/ros
+   roslaunch launch/site.launch
 ```
 5. Confirm that traffic light detection works on real life images

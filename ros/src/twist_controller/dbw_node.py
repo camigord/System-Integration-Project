@@ -39,7 +39,7 @@ class DBWNode(object):
         self.enabled = False
         rospy.logwarn('TwistController disabled...')
 
-        self.sample_rate = 10       # 50Hz
+        self.sample_rate = 50       # 50Hz
 
         self.required_linear_velocity = None
         self.required_angular_velocity = None

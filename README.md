@@ -10,7 +10,7 @@ Programming a Real Self-Driving Car for the UDACITY Nanodegree
 |------------------------|---------------|----------------|---------------|
 | <img src="./assets/c_gordillo.jpg" alt="Camilo Gordillo" width="150" height="150"> | Camilo Gordillo | [Camilo](https://de.linkedin.com/in/camilogordillo/en) | <camigord@gmail.com> |
 | <img src="./assets/s_salati.jpg" alt="Stefano Salati" width="150" height="150"> | Stefano Salati | [Stefano](https://www.linkedin.com/in/stefanosalati/) | <stef.salati@gmail.com> |
-| <img src="./assets/profile.jpg" alt="Stefan Rademacher" width="150" height="150"> | Stefan Rademacher | [Stefan](https://www.linkedin.com/in/stefan-rademacher/) |  |
+| <img src="./assets/s_rademacher.jpg" alt="Stefan Rademacher" width="150" height="150"> | Stefan Rademacher | [Stefan](https://www.linkedin.com/in/stefan-rademacher/) | <rademacher@outlook.com> |
 | <img src="./assets/t_grelier.jpg" alt="Thomas GRELIER" width="150" height="150"> | Thomas GRELIER | [Thomas](https://www.linkedin.com/in/thomas-grelier/) | <masto.grelier@gmail.com> |
 
 ## Project description
@@ -37,6 +37,34 @@ Throttle and brake pedal are then controlled by a PID, tuned with:
 | VEL_PID_P | 0.8    |
 | VEL_PID_I | 0.0001 |
 | VEL_PID_D | 0.01   |
+
+### Traffic Light Classification
+
+We assume that there is only one traffic light color in Carlas field of view at the same time. Thus the detection with the highest score gets selected to identify the traffic light color. If there is no detection with a score higher than 50% probability, the classifier function returns "UNKNOWN".
+The detection itself is done using a Convolutional Neural Network. We have used the TensorFlow Object Detection API and detection models, that are pre-trained on the COCO dataset. To be exact we have used two different models, the "ssd_inception_v2_coco" and  the "faster_rcnn_inception_v2_coco".
+
+#### Dataset
+
+Our dataset used for the training of the classifier consists of:
+- 280 images from the Udacity Simulator
+- 710 images from the training bag that was recorded on the Udacity self-driving car
+
+All images of the dataset where labeled manually. The dataset had to be converted into the TFRecord format.
+
+#### Training
+We have trained two classifier. One for the simulator and one for the real world. The training was done using the AWS Deep Learning AMI and the following configuration parameters:
+
+- num_classes: 4 ('Green','Red','Yellow','Unknown')
+- num_steps: 10000
+- max_detections_per_class: 10
+
+Other parameters were used from the sample configuration files provided by the tensorflow team (https://github.com/tensorflow/models/tree/master/research/object_detection/samples/configs).
+
+#### Validation
+We have then validated the trained classifier on 20 "unseen" images. Both classifier (for simulator and real world) have correctly detected and classified all traffic lights on the test images. Here are two examples:
+
+<img src="./assets/light_classification_sim.png" width="400" height="300">
+<img src="./assets/light_classification_real.png" width="400" height="300">
 
 ## Installation
 ### Native Installation
@@ -90,7 +118,7 @@ catkin_make
 source devel/setup.sh
 ```
 
-### Running 
+### Running
 
 #### Simulator
 

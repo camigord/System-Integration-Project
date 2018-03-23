@@ -13,7 +13,7 @@ import yaml
 import math
 import os
 
-STATE_COUNT_THRESHOLD = 2
+STATE_COUNT_THRESHOLD = 1
 
 VISIBLE_DISTANCE = 100
 # Use true states of traffic lights, provided by simulator
